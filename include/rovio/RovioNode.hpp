@@ -55,6 +55,7 @@
 #include "rovio/CoordinateTransform/FeatureOutputReadable.hpp"
 #include "rovio/CoordinateTransform/YprOutput.hpp"
 #include "rovio/CoordinateTransform/LandmarkOutput.hpp"
+#include "rovio/RadarTarget.hpp"
 
 namespace rovio {
 
@@ -83,6 +84,9 @@ class RovioNode{
   typedef typename std::tuple_element<2,typename mtFilter::mtUpdates>::type mtVelocityUpdate;
   typedef typename mtVelocityUpdate::mtMeas mtVelocityMeas;
   mtVelocityMeas velocityUpdateMeas_;
+  typedef typename std::tuple_element<3,typename mtFilter::mtUpdates>::type mtDopplerUpdate;
+  typedef typename mtDopplerUpdate::mtMeas mtDopplerMeas;
+  mtDopplerMeas dopplerUpdateMeas_;
 
   struct FilterInitializationState {
     FilterInitializationState()
@@ -134,6 +138,7 @@ class RovioNode{
   ros::Subscriber subGroundtruth_;
   ros::Subscriber subGroundtruthOdometry_;
   ros::Subscriber subVelocity_;
+  ros::Subscriber subRadar_;
   ros::ServiceServer srvResetFilter_;
   ros::ServiceServer srvResetToPoseFilter_;
   ros::Publisher pubOdometry_;
@@ -211,6 +216,7 @@ class RovioNode{
     subGroundtruth_ = nh_.subscribe("pose", 1000, &RovioNode::groundtruthCallback,this);
     subGroundtruthOdometry_ = nh_.subscribe("odometry", 1000, &RovioNode::groundtruthOdometryCallback, this);
     subVelocity_ = nh_.subscribe("abss/twist", 1000, &RovioNode::velocityCallback,this);
+    subRadar_ = nh_.subscribe("radar/cloud", 1000, &RovioNode::radarCallback,this);
 
     // Initialize ROS service servers.
     srvResetFilter_ = nh_.advertiseService("rovio/reset", &RovioNode::resetServiceCallback, this);
@@ -578,6 +584,34 @@ class RovioNode{
     }
   }
 
+  /**
+   * @brief Callback for radar point cloud measurements
+   * 
+   */
+  void radarCallback(const sensor_msgs::PointCloud2::Ptr& cloud){
+    const double ts = cloud->header.stamp.toSec() + (18.4e-3)/2; // TODO: add time offset
+    ROS_INFO("Got measurement at: %f", ts);
+
+    std::lock_guard<std::mutex> lock(m_filter_);
+    const auto imu_meas = mpFilter_->predictionTimeline_.measMap_.lower_bound(ts);
+    V3D BwWB = imu_meas->second.template get<mtPredictionMeas::_gyr>();
+    if (imu_meas == mpFilter_->predictionTimeline_.measMap_.end()){
+      ROS_ERROR("Couldn't get IMU at mid radar chirp");
+    }
+    dopplerUpdateMeas_.template get<mtDopplerMeas::_aux>().BwWB_ = BwWB;
+
+    if(init_state_.isInitialized()){
+      ROS_INFO("try adding to filter");
+      const TargetVector targets = fromRos(cloud);
+      // TODO: filter point cloud
+      dopplerUpdateMeas_.template get<mtDopplerMeas::_aux>().targets_ = targets;
+
+      std::cout << "add update meas" << '\n';
+      mpFilter_->template addUpdateMeas<3>(dopplerUpdateMeas_, cloud->header.stamp.toSec());
+      updateAndPublish();
+    }
+  }
+
   /** \brief ROS service handler for resetting the filter.
    */
   bool resetServiceCallback(std_srvs::Empty::Request& /*request*/,
@@ -664,7 +698,7 @@ class RovioNode{
 
         // Obtain the save filter state.
         mtFilterState& filterState = mpFilter_->safe_;
-	mtState& state = mpFilter_->safe_.state_;
+        mtState& state = mpFilter_->safe_.state_;
         state.updateMultiCameraExtrinsics(&mpFilter_->multiCamera_);
         MXD& cov = mpFilter_->safe_.cov_;
         imuOutputCT_.transformState(state,imuOutput_);
