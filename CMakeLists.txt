@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 2.6)
 project(rovio)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -march=native")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -march=native")
 set(ROVIO_NMAXFEATURE 25 CACHE STRING "Number of features for ROVIO")
 set(ROVIO_NCAM 1 CACHE STRING "Number of enabled cameras")
 set(ROVIO_NLEVELS 4 CACHE STRING "Number of image leavels for the features")
@@ -54,6 +54,9 @@ else()
   pkg_check_modules(YamlCpp REQUIRED yaml-cpp>=0.5)
 endif()
 
+find_package(PCL REQUIRED)
+message("PCL Version:" ${PCL_VERSION})
+message("PCL Path:" ${PCL_DIR})
 
 ##################### Install ROS stuff #####################
 find_package(catkin REQUIRED COMPONENTS
@@ -69,6 +72,7 @@ find_package(catkin REQUIRED COMPONENTS
 	std_msgs
 	tf
 	rosbag
+	pcl_conversions
 )
 
 add_service_files(
@@ -98,9 +102,10 @@ catkin_package(
 	tf
 	rosbag
   yaml_cpp_catkin
+	pcl_conversions
 )
 
-include_directories(include ${catkin_INCLUDE_DIRS} ${YamlCpp_INCLUDE_DIRS})
+include_directories(include ${catkin_INCLUDE_DIRS} ${YamlCpp_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
 
 if(MAKE_SCENE)
 	add_library(${PROJECT_NAME} src/Camera.cpp src/FeatureCoordinates.cpp src/FeatureDistance.cpp src/Scene.cpp)
