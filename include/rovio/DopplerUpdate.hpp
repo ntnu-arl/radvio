@@ -9,14 +9,12 @@
 
 namespace rovio
 {
-#define MAX_CLOUD_SIZE 100
-
 /** \brief Class, defining the innovation.
  */
-class DopplerInnovation : public LWF::State<LWF::VectorElement<MAX_CLOUD_SIZE>>
+class DopplerInnovation : public LWF::State<LWF::ScalarElement>
 {
 public:
-  typedef LWF::State<LWF::VectorElement<MAX_CLOUD_SIZE>> Base;
+  typedef LWF::State<LWF::ScalarElement> Base;
   using Base::E_;
   static constexpr unsigned int _doppler = 0;
   DopplerInnovation()
@@ -35,7 +33,7 @@ public:
   DopplerUpdateMeasAuxiliary(){};
   virtual ~DopplerUpdateMeasAuxiliary(){};
   TargetVector targets_;
-  V3D BwWB_;  // mid chirp angular rate
+  V3D BwWB_{ 0, 0, 0 };  // mid chirp angular rate
 };
 
 /**  \brief Empty measurement
@@ -75,10 +73,10 @@ public:
 
 /**  \brief Class holding the update noise.
  */
-class DopplerUpdateNoise : public LWF::State<LWF::VectorElement<MAX_CLOUD_SIZE>>
+class DopplerUpdateNoise : public LWF::State<LWF::ScalarElement>
 {
 public:
-  typedef LWF::State<LWF::VectorElement<MAX_CLOUD_SIZE>> Base;
+  typedef LWF::State<LWF::ScalarElement> Base;
   using Base::E_;
   static constexpr unsigned int _doppler = 0;
   DopplerUpdateNoise()
@@ -93,8 +91,7 @@ public:
  * ODEntry<Start entry, dimension of detection>
  */
 class DopplerOutlierDetection
-  : public LWF::OutlierDetection<
-        LWF::ODEntry<DopplerInnovation::template getId<DopplerInnovation::_doppler>(), MAX_CLOUD_SIZE>>
+  : public LWF::OutlierDetection<LWF::ODEntry<DopplerInnovation::template getId<DopplerInnovation::_doppler>(), 1>>
 {
 public:
   virtual ~DopplerOutlierDetection(){};
@@ -122,9 +119,9 @@ public:
   typedef typename Base::mtNoise mtNoise;
   typedef typename Base::mtOutlierDetection mtOutlierDetection;
 
-  V3D RvR_;                                          // radar-frame velocity expressed in radar frame
-  QPD qMR_{ 0.9990482216, 0.0, 0.0436193874, 0.0 };  // TODO: rotation from {R} to {M}
-  V3D MrMR_{ 0.01, 0.0, 0.05 };                      // TODO: translation from {M} to {R} in {M}
+  V3D RvR_;                                           // radar-frame velocity expressed in radar frame
+  QPD qMR_{ -0.9990482216, 0.0, 0.0436193874, 0.0 };  // TODO: make part of state // rotation from {R} to {M} 
+  V3D MrMR_{ 0.01, 0.0, 0.05 };                       // TODO: make part of state // translation from {M} to {R} in {M} 
 
   /** \brief Constructor.
    *
@@ -153,22 +150,10 @@ public:
    */
   void evalInnovation(mtInnovation& y, const mtState& state, const mtNoise& noise) const
   {
-    std::cout << "eval inno" << '\n';
-    const size_t num_targets = std::min((size_t)MAX_CLOUD_SIZE, meas_.aux().targets_.size());
+    const Target& t = meas_.aux().targets_[state.aux().activeTarget_];
 
-    Eigen::Matrix<double, MAX_CLOUD_SIZE, 1> doppler_error;
-    doppler_error.setZero();
-
-    std::cout << "RvR: " << RvR_.transpose() << '\n';
-
-    std::cout << "num_targets: " << num_targets << '\n';
-    for (size_t i = 0; i < num_targets; ++i)
-    {
-      const Target& t = meas_.aux().targets_[i];
-      doppler_error(i) = -t.bearing.dot(RvR_) - t.radial_speed;
-    }
-
-    std::cout << doppler_error.transpose() << '\n';
+    const double prediction = -t.bearing.dot(RvR_);
+    const double doppler_error = prediction - t.radial_speed;
 
     y.template get<mtInnovation::_doppler>() = doppler_error + noise.template get<mtNoise::_doppler>();
   }
@@ -182,22 +167,16 @@ public:
    */
   void jacState(MXD& F, const mtState& state) const
   {
-    std::cout << "F" << '\n';
     F.setZero();
-    // F.template block<3, 3>(mtInnovation::template getId<mtInnovation::_doppler>(),
-    //                        mtState::template getId<mtState::_doppler>()) = MPD(qAM_).matrix();
-    const size_t num_targets = std::min((size_t)MAX_CLOUD_SIZE, meas_.aux().targets_.size());
 
-    Eigen::Matrix3d rotmat = MPD(qMR_).matrix();
-    std::cout << "MrMR: " << MrMR_.transpose() << '\n';
-    std::cout << "qMR: " << qMR_ << '\n';
-    for (size_t i = 0; i < num_targets; ++i)
-    {
-      const Target& t = meas_.aux().targets_[i];
-      F.template block<1, 3>(i, mtState::template getId<mtState::_vel>()) = -t.bearing.transpose() * rotmat.transpose();
-      F.template block<1, 3>(i, mtState::template getId<mtState::_gyb>()) =
-          -t.bearing.transpose() * (rotmat.transpose() * gSM(MrMR_));
-    }
+    const Eigen::Matrix3d rotmat = MPD(qMR_).matrix();
+    const Target& t = meas_.aux().targets_[state.aux().activeTarget_];
+
+    F.template block<1, 3>(mtInnovation::template getId<mtInnovation::_doppler>(),
+                           mtState::template getId<mtState::_vel>()) = t.bearing.transpose() * rotmat.transpose();
+    F.template block<1, 3>(mtInnovation::template getId<mtInnovation::_doppler>(),
+                           mtState::template getId<mtState::_gyb>()) =
+        -t.bearing.transpose() * (rotmat.transpose() * gSM(MrMR_));
   }
 
   /** \brief Computes the Jacobian for the update step of the filter w.r.t. to the noise variables
@@ -209,33 +188,38 @@ public:
    */
   void jacNoise(MXD& G, const mtState& state) const
   {
-    std::cout << "G" << '\n';
     G.setZero();
-    G.template block<MAX_CLOUD_SIZE, MAX_CLOUD_SIZE>(mtInnovation::template getId<mtInnovation::_doppler>(),
-                                                     mtNoise::template getId<mtNoise::_doppler>()) =
-        Eigen::Matrix<double, MAX_CLOUD_SIZE, MAX_CLOUD_SIZE>::Identity();
+    G = Eigen::Matrix<double, 1, 1>::Identity();
+  }
+
+  void commonPreProcess(mtFilterState& filterState, const mtMeas& meas)
+  {
+    filterState.state_.aux().activeTarget_ = 0;
   }
 
   void preProcess(mtFilterState& filterState, const mtMeas& meas, bool& isFinished)
   {
-    std::cout << "preprocess" << '\n';
-    isFinished = false;  // TODO: secret to looping through targets i think
+    if (isFinished)
+    {
+      commonPreProcess(filterState, meas);
+      isFinished = false;
+    }
 
     typename mtFilterState::mtState& state = filterState.state_;
 
-    // calculate common prediction
-    // RvR_ = state.qRM().rotate(state.MvM() + (pred.template get<mtMeas::_gyr>() - state.gyb).cross(state.MrMR));
-    const V3D MvR = state.MvM() + (meas_.aux().BwWB_ - state.gyb()).cross(MrMR_);
-    RvR_ = qMR_.inverted().rotate(MvR);
+    const V3D MvR = -state.MvM() + (meas.aux().BwWB_ - state.gyb()).cross(MrMR_);
+    RvR_ = qMR_.inverseRotate(MvR);
 
-    std::cout << "RvR_: " << RvR_.transpose() << '\n';
+    if (state.aux().activeTarget_ >= meas.aux().targets_.size())
+    {
+      isFinished = true;
+    }
   }
 
   void postProcess(mtFilterState& filterState, const mtMeas& meas, const mtOutlierDetection& outlierDetection,
                    bool& isFinished)
   {
-    std::cout << "postprocess" << '\n';
-    isFinished = true;
+    filterState.state_.aux().activeTarget_++;
   }
 };
 

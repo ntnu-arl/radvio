@@ -216,7 +216,7 @@ class RovioNode{
     subGroundtruth_ = nh_.subscribe("pose", 1000, &RovioNode::groundtruthCallback,this);
     subGroundtruthOdometry_ = nh_.subscribe("odometry", 1000, &RovioNode::groundtruthOdometryCallback, this);
     subVelocity_ = nh_.subscribe("abss/twist", 1000, &RovioNode::velocityCallback,this);
-    subRadar_ = nh_.subscribe("radar/cloud", 1000, &RovioNode::radarCallback,this);
+    subRadar_ = nh_.subscribe("radar", 1000, &RovioNode::radarCallback,this);
 
     // Initialize ROS service servers.
     srvResetFilter_ = nh_.advertiseService("rovio/reset", &RovioNode::resetServiceCallback, this);
@@ -512,6 +512,7 @@ class RovioNode{
     }
     cv::Mat cv_img;
     cv_ptr->image.copyTo(cv_img);
+    cv_img *= 0;
     if(init_state_.isInitialized() && !cv_img.empty()){
       double msgTime = img->header.stamp.toSec();
       if(msgTime != imgUpdateMeas_.template get<mtImgMeas::_aux>().imgTime_){
@@ -589,24 +590,22 @@ class RovioNode{
    * 
    */
   void radarCallback(const sensor_msgs::PointCloud2::Ptr& cloud){
-    const double ts = cloud->header.stamp.toSec() + (18.4e-3)/2; // TODO: add time offset
-    ROS_INFO("Got measurement at: %f", ts);
+    const double ts = cloud->header.stamp.toSec() + (18.4e-3)/2; // TODO: add time offset as parameter
 
     std::lock_guard<std::mutex> lock(m_filter_);
     const auto imu_meas = mpFilter_->predictionTimeline_.measMap_.lower_bound(ts);
     V3D BwWB = imu_meas->second.template get<mtPredictionMeas::_gyr>();
     if (imu_meas == mpFilter_->predictionTimeline_.measMap_.end()){
       ROS_ERROR("Couldn't get IMU at mid radar chirp");
+      ros::shutdown();
     }
     dopplerUpdateMeas_.template get<mtDopplerMeas::_aux>().BwWB_ = BwWB;
 
     if(init_state_.isInitialized()){
-      ROS_INFO("try adding to filter");
       const TargetVector targets = fromRos(cloud);
       // TODO: filter point cloud
       dopplerUpdateMeas_.template get<mtDopplerMeas::_aux>().targets_ = targets;
 
-      std::cout << "add update meas" << '\n';
       mpFilter_->template addUpdateMeas<3>(dopplerUpdateMeas_, cloud->header.stamp.toSec());
       updateAndPublish();
     }

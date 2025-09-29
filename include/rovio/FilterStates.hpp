@@ -73,6 +73,7 @@ class StateAuxiliary: public LWF::AuxiliaryBase<StateAuxiliary<nMax,nLevels,patc
     }
     poseMeasRot_.setIdentity();
     poseMeasLin_.setZero();
+    activeTarget_ = 0;
   };
 
   /** \brief Destructor
@@ -95,6 +96,7 @@ class StateAuxiliary: public LWF::AuxiliaryBase<StateAuxiliary<nMax,nLevels,patc
   QPD poseMeasRot_; /**<Groundtruth attitude measurement. qMI.*/
   Eigen::Vector3d poseMeasLin_; /**<Groundtruth position measurement. IrIM*/
   FeatureManager<nLevels,patchSize,nCam>* mpCurrentFeature_; /**<Pointer to active feature*/
+  int activeTarget_; /**<Active radar target ID. Needed in the Doppler update procedure */
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

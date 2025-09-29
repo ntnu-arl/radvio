@@ -7,6 +7,7 @@
 
     <remap from="imu0" to="/vectornav_driver_node/imu/data"/>
     <remap from="cam0/image_raw" to="/d455/infra1/image_rect_raw"/>
+    <remap from="radar" to="/radar/cloud"/>
     <!-- <remap from="cam1/image_raw" to="/d455/infra2/image_rect_raw"/> -->
   </node>
 </launch>
