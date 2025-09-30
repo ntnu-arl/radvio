@@ -119,9 +119,8 @@ public:
   typedef typename Base::mtNoise mtNoise;
   typedef typename Base::mtOutlierDetection mtOutlierDetection;
 
-  V3D RvR_;                                           // radar-frame velocity expressed in radar frame
-  QPD qMR_{ -0.9990482216, 0.0, 0.0436193874, 0.0 };  // TODO: make part of state // rotation from {R} to {M} 
-  V3D MrMR_{ 0.01, 0.0, 0.05 };                       // TODO: make part of state // translation from {M} to {R} in {M} 
+  V3D MvR_;  // radar-frame velocity expressed in IMU frame
+  V3D RvR_;  // radar-frame velocity expressed in radar frame
 
   /** \brief Constructor.
    *
@@ -169,14 +168,20 @@ public:
   {
     F.setZero();
 
-    const Eigen::Matrix3d rotmat = MPD(qMR_).matrix();
+    const Eigen::Matrix3d rotmat = MPD(state.qRM()).matrix();
     const Target& t = meas_.aux().targets_[state.aux().activeTarget_];
+    const V3D mu = t.bearing;
+    const V3D w_hat = meas_.aux().BwWB_ - state.gyb();
 
+    // not -t.bearing bc of ROVIO internal representation
     F.template block<1, 3>(mtInnovation::template getId<mtInnovation::_doppler>(),
-                           mtState::template getId<mtState::_vel>()) = t.bearing.transpose() * rotmat.transpose();
+                           mtState::template getId<mtState::_vel>()) = mu.transpose() * rotmat;
     F.template block<1, 3>(mtInnovation::template getId<mtInnovation::_doppler>(),
-                           mtState::template getId<mtState::_gyb>()) =
-        -t.bearing.transpose() * (rotmat.transpose() * gSM(MrMR_));
+                           mtState::template getId<mtState::_gyb>()) = -mu.transpose() * rotmat * gSM(state.MrMR());
+    F.template block<1, 3>(mtInnovation::template getId<mtInnovation::_doppler>(),
+                           mtState::template getId<mtState::_rep>()) = -mu.transpose() * gSM(rotmat * w_hat);
+    F.template block<1, 3>(mtInnovation::template getId<mtInnovation::_doppler>(),
+                           mtState::template getId<mtState::_rea>()) = mu.transpose() * rotmat * gSM(MvR_);
   }
 
   /** \brief Computes the Jacobian for the update step of the filter w.r.t. to the noise variables
@@ -207,8 +212,9 @@ public:
 
     typename mtFilterState::mtState& state = filterState.state_;
 
-    const V3D MvR = -state.MvM() + (meas.aux().BwWB_ - state.gyb()).cross(MrMR_);
-    RvR_ = qMR_.inverseRotate(MvR);
+    // -state.MvM() bc of ROVIO internal representation
+    MvR_ = -state.MvM() + (meas.aux().BwWB_ - state.gyb()).cross(state.MrMR());
+    RvR_ = state.qRM().rotate(MvR_);
 
     if (state.aux().activeTarget_ >= meas.aux().targets_.size())
     {

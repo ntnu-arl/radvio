@@ -115,6 +115,23 @@ class RovioFilter:public LWF::FilterBase<ImuPrediction<FILTERSTATE>,
       doubleRegister_.registerVector("Camera" + std::to_string(camID) + ".MrMC",init_.state_.MrMC(camID));
       doubleRegister_.registerQuaternion("Camera" + std::to_string(camID) + ".qCM",init_.state_.qCM(camID));
     }
+    doubleRegister_.registerVector("Radar.MrMR",init_.state_.aux().MrMR_);
+    doubleRegister_.registerQuaternion("Radar.qRM",init_.state_.aux().qRM_);
+    doubleRegister_.removeScalarByVar(init_.state_.MrMR()(0));
+    doubleRegister_.removeScalarByVar(init_.state_.MrMR()(1));
+    doubleRegister_.removeScalarByVar(init_.state_.MrMR()(2));
+    doubleRegister_.removeScalarByVar(init_.state_.qRM().toImplementation().w());
+    doubleRegister_.removeScalarByVar(init_.state_.qRM().toImplementation().x());
+    doubleRegister_.removeScalarByVar(init_.state_.qRM().toImplementation().y());
+    doubleRegister_.removeScalarByVar(init_.state_.qRM().toImplementation().z());
+    for(int j=0;j<3;j++){
+      doubleRegister_.removeScalarByVar(init_.cov_(mtState::template getId<mtState::_rep>()+j,mtState::template getId<mtState::_rep>()+j));
+      doubleRegister_.removeScalarByVar(init_.cov_(mtState::template getId<mtState::_rea>()+j,mtState::template getId<mtState::_rea>()+j));
+      doubleRegister_.registerScalar("Init.Covariance.rep",init_.cov_(mtState::template getId<mtState::_rep>()+j,mtState::template getId<mtState::_rep>()+j));
+      doubleRegister_.registerScalar("Init.Covariance.rea",init_.cov_(mtState::template getId<mtState::_rea>()+j,mtState::template getId<mtState::_rea>()+j));
+    }
+    doubleRegister_.registerVector("Radar.MrMR",init_.state_.MrMR());
+    doubleRegister_.registerQuaternion("Radar.qRM",init_.state_.qRM());
     for(int i=0;i<mtState::nPose_;i++){
       doubleRegister_.removeScalarByVar(init_.state_.poseLin(i)(0));
       doubleRegister_.removeScalarByVar(init_.state_.poseLin(i)(1));

@@ -150,6 +150,7 @@ class RovioNode{
   ros::Publisher pubPatch_;            /**<Publisher: Patch data.*/
   ros::Publisher pubMarkers_;          /**<Publisher: Ros line marker, indicating the depth uncertainty of a landmark.*/
   ros::Publisher pubExtrinsics_[mtState::nCam_];
+  ros::Publisher pubRadarExtrinsics_;
   ros::Publisher pubImuBias_;
 
   // Ros Messages
@@ -158,6 +159,7 @@ class RovioNode{
   nav_msgs::Odometry odometryMsg_;
   geometry_msgs::PoseWithCovarianceStamped estimatedPoseWithCovarianceStampedMsg_;
   geometry_msgs::PoseWithCovarianceStamped extrinsicsMsg_[mtState::nCam_];
+  geometry_msgs::PoseWithCovarianceStamped radarExtrinsicsMsg_;
   sensor_msgs::PointCloud2 pclMsg_;
   sensor_msgs::PointCloud2 patchMsg_;
   visualization_msgs::Marker markerMsg_;
@@ -187,6 +189,10 @@ class RovioNode{
   std::string world_frame_;
   std::string camera_frame_;
   std::string imu_frame_;
+  std::string radar_frame_;
+
+  // Multiplier for image matrix (to effectively disable vision)
+  int image_multiplier_;
 
   /** \brief Constructor
    */
@@ -234,6 +240,7 @@ class RovioNode{
     for(int camID=0;camID<mtState::nCam_;camID++){
       pubExtrinsics_[camID] = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>("rovio/extrinsics" + std::to_string(camID), 1 );
     }
+    pubRadarExtrinsics_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>("rovio/extrinsics/radar", 1);
     pubImuBias_ = nh_.advertise<sensor_msgs::Imu>("rovio/imu_biases", 1 );
 
     // Handle coordinate frame naming
@@ -241,10 +248,15 @@ class RovioNode{
     world_frame_ = "world";
     camera_frame_ = "camera";
     imu_frame_ = "imu";
+    radar_frame_ = "radar";
     nh_private_.param("map_frame", map_frame_, map_frame_);
     nh_private_.param("world_frame", world_frame_, world_frame_);
     nh_private_.param("camera_frame", camera_frame_, camera_frame_);
     nh_private_.param("imu_frame", imu_frame_, imu_frame_);
+    nh_private_.param("radar_frame", radar_frame_, radar_frame_);
+
+    image_multiplier_ = 1;
+    nh_private_.param("image_multiplier", image_multiplier_, image_multiplier_);
 
     // Initialize messages
     transformMsg_.header.frame_id = world_frame_;
@@ -259,6 +271,7 @@ class RovioNode{
     for(int camID=0;camID<mtState::nCam_;camID++){
       extrinsicsMsg_[camID].header.frame_id = imu_frame_;
     }
+    radarExtrinsicsMsg_.header.frame_id = radar_frame_;
     imuBiasMsg_.header.frame_id = world_frame_;
     imuBiasMsg_.orientation.x = 0;
     imuBiasMsg_.orientation.y = 0;
@@ -512,7 +525,7 @@ class RovioNode{
     }
     cv::Mat cv_img;
     cv_ptr->image.copyTo(cv_img);
-    cv_img *= 0;
+    cv_img *= image_multiplier_;
     if(init_state_.isInitialized() && !cv_img.empty()){
       double msgTime = img->header.stamp.toSec();
       if(msgTime != imgUpdateMeas_.template get<mtImgMeas::_aux>().imgTime_){
@@ -699,6 +712,7 @@ class RovioNode{
         mtFilterState& filterState = mpFilter_->safe_;
         mtState& state = mpFilter_->safe_.state_;
         state.updateMultiCameraExtrinsics(&mpFilter_->multiCamera_);
+        // TODO:?
         MXD& cov = mpFilter_->safe_.cov_;
         imuOutputCT_.transformState(state,imuOutput_);
 
@@ -748,6 +762,15 @@ class RovioNode{
           tf_transform_CM.setRotation(tf::Quaternion(state.qCM(camID).x(),state.qCM(camID).y(),state.qCM(camID).z(),-state.qCM(camID).w()));
           tb_.sendTransform(tf_transform_CM);
         }
+
+        // send radar pose
+        tf::StampedTransform tf_transform_RM;
+        tf_transform_RM.frame_id_ = imu_frame_;
+        tf_transform_RM.child_frame_id_ = radar_frame_;
+        tf_transform_RM.stamp_ = ros::Time(mpFilter_->safe_.t_);
+        tf_transform_RM.setOrigin(tf::Vector3(state.MrMR()(0),state.MrMR()(1),state.MrMR()(2)));
+        tf_transform_RM.setRotation(tf::Quaternion(state.qRM().x(),state.qRM().y(),state.qRM().z(),-state.qRM().w()));
+        tb_.sendTransform(tf_transform_RM);
 
         // Publish Odometry
         if(pubOdometry_.getNumSubscribers() > 0 || forceOdometryPublishing_){
@@ -872,6 +895,28 @@ class RovioNode{
             }
             pubExtrinsics_[camID].publish(extrinsicsMsg_[camID]);
           }
+        }
+        // Radar extrinsics
+        if (pubRadarExtrinsics_.getNumSubscribers() > 0 || forceExtrinsicsPublishing_){
+            radarExtrinsicsMsg_.header.seq = msgSeq_;
+            radarExtrinsicsMsg_.header.stamp = ros::Time(mpFilter_->safe_.t_);
+            radarExtrinsicsMsg_.pose.pose.position.x = state.MrMR()(0);
+            radarExtrinsicsMsg_.pose.pose.position.y = state.MrMR()(1);
+            radarExtrinsicsMsg_.pose.pose.position.z = state.MrMR()(2);
+            radarExtrinsicsMsg_.pose.pose.orientation.x = state.qRM().x();
+            radarExtrinsicsMsg_.pose.pose.orientation.y = state.qRM().y();
+            radarExtrinsicsMsg_.pose.pose.orientation.z = state.qRM().z();
+            radarExtrinsicsMsg_.pose.pose.orientation.w = -state.qRM().w();
+            for(unsigned int i=0;i<6;i++){
+              unsigned int ind1 = mtState::template getId<mtState::_rep>()+i;
+              if(i>=3) ind1 = mtState::template getId<mtState::_rea>()+i-3;
+              for(unsigned int j=0;j<6;j++){
+                unsigned int ind2 = mtState::template getId<mtState::_rep>()+j;
+                if(j>=3) ind2 = mtState::template getId<mtState::_rea>()+j-3;
+                radarExtrinsicsMsg_.pose.covariance[j+6*i] = cov(ind1,ind2);
+              }
+            }
+            pubRadarExtrinsics_.publish(radarExtrinsicsMsg_);
         }
 
         // Publish IMU biases

@@ -28,6 +28,16 @@ Camera1
   MrMC_y -0.05255323224024594;                               Y-entry of IMU to Camera vector (expressed in IMU CF) [m]
   MrMC_z 0.018657666032393022;                               Z-entry of IMU to Camera vector (expressed in IMU CF) [m]
 }
+Radar
+{
+    qRM_x 0
+    qRM_y 0.0436193874
+    qRM_z 0
+    qRM_w 0.9990482216
+    MrMR_x 0.01
+    MrMR_y 0
+    MrMR_z 0.05
+}
 Init
 {
     State
@@ -68,6 +78,8 @@ Init
         att_1 0.1;      Y-Covariance of initial attitude [rad^2]
         att_2 0.1;      Z-Covariance of initial attitude [rad^2]
         vea 0.01;     Covariance of initial rotational camera-IMU extrinsics, same for all entries [rad^2]
+        rep 0.0001;     Covariance of initial linear radar-IMU extrinsics, same for all entries [m^2]
+        rea 0.01;       Covariance of initial rotational radar-IMU extrinsics, same for all entries [rad^2]
     }
 }
 ImgUpdate
@@ -165,6 +177,8 @@ Prediction
         vea 1e-8;               Covariance parameter of rotational extrinsics prediction [rad^2/s]
         dep 0.0001;             Covariance parameter of distance prediction [m^2/s]
         nor 0.00001;                Covariance parameter of bearing vector prediction [rad^2/s]
+        rep 1e-8;                 Covariance parameter of linear extrinsics prediction [m^2/s]
+        rea 1e-8;                 Covariance parameter of rotational extrinsics prediction [rad^2/s]
 	}
     MotionDetection
     {
