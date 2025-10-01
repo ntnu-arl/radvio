@@ -122,17 +122,25 @@ public:
   V3D MvR_;  // radar-frame velocity expressed in IMU frame
   V3D RvR_;  // radar-frame velocity expressed in radar frame
 
+  // Parameter
+  double chirp_duration_;
+  double range_min_;
+
   /** \brief Constructor.
    *
    *   Loads and sets the needed parameters.
    */
   DopplerUpdate()
   {
+    chirp_duration_ = 0.0;
+    range_min_ = 0.0;
     intRegister_.removeScalarByStr("maxNumIteration");
     doubleRegister_.removeScalarByStr("alpha");
     doubleRegister_.removeScalarByStr("beta");
     doubleRegister_.removeScalarByStr("kappa");
     doubleRegister_.removeScalarByStr("updateVecNormTermination");
+    doubleRegister_.registerScalar("chirp_duration_s", chirp_duration_);
+    doubleRegister_.registerScalar("range_min_", range_min_);
   };
 
   /** \brief Destructor
@@ -216,16 +224,28 @@ public:
     MvR_ = -state.MvM() + (meas.aux().BwWB_ - state.gyb()).cross(state.MrMR());
     RvR_ = state.qRM().rotate(MvR_);
 
-    if (state.aux().activeTarget_ >= meas.aux().targets_.size())
-    {
+    const int& ID = state.aux().activeTarget_;
+    const TargetVector& targets = meas.aux().targets_;
+
+    if (ID >= targets.size())
       isFinished = true;
-    }
   }
 
   void postProcess(mtFilterState& filterState, const mtMeas& meas, const mtOutlierDetection& outlierDetection,
                    bool& isFinished)
   {
     filterState.state_.aux().activeTarget_++;
+  }
+
+  bool validTarget(const Target& target)
+  {
+    const double range = target.xyz.norm();
+    if (range < range_min_)
+    {
+      return false;
+    }
+
+    return true;
   }
 };
 

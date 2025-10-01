@@ -87,6 +87,7 @@ class RovioNode{
   typedef typename std::tuple_element<3,typename mtFilter::mtUpdates>::type mtDopplerUpdate;
   typedef typename mtDopplerUpdate::mtMeas mtDopplerMeas;
   mtDopplerMeas dopplerUpdateMeas_;
+  mtDopplerUpdate* mpDopplerUpdate_;
 
   struct FilterInitializationState {
     FilterInitializationState()
@@ -151,6 +152,7 @@ class RovioNode{
   ros::Publisher pubMarkers_;          /**<Publisher: Ros line marker, indicating the depth uncertainty of a landmark.*/
   ros::Publisher pubExtrinsics_[mtState::nCam_];
   ros::Publisher pubRadarExtrinsics_;
+  ros::Publisher pubRadarFiltered_;
   ros::Publisher pubImuBias_;
 
   // Ros Messages
@@ -162,6 +164,7 @@ class RovioNode{
   geometry_msgs::PoseWithCovarianceStamped radarExtrinsicsMsg_;
   sensor_msgs::PointCloud2 pclMsg_;
   sensor_msgs::PointCloud2 patchMsg_;
+  sensor_msgs::PointCloud2 targetsFilteredMsg_;
   visualization_msgs::Marker markerMsg_;
   sensor_msgs::Imu imuBiasMsg_;
   int msgSeq_;
@@ -194,6 +197,9 @@ class RovioNode{
   // Multiplier for image matrix (to effectively disable vision)
   int image_multiplier_;
 
+  // current targets filtered
+  TargetVector targets_filtered_;
+
   /** \brief Constructor
    */
   RovioNode(ros::NodeHandle& nh, ros::NodeHandle& nh_private, std::shared_ptr<mtFilter> mpFilter)
@@ -205,6 +211,7 @@ class RovioNode{
     #endif
     mpImgUpdate_ = &std::get<0>(mpFilter_->mUpdates_);
     mpPoseUpdate_ = &std::get<1>(mpFilter_->mUpdates_);
+    mpDopplerUpdate_ = &std::get<3>(mpFilter_->mUpdates_);
     forceOdometryPublishing_ = false;
     forcePoseWithCovariancePublishing_ = false;
     forceTransformPublishing_ = false;
@@ -240,7 +247,8 @@ class RovioNode{
     for(int camID=0;camID<mtState::nCam_;camID++){
       pubExtrinsics_[camID] = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>("rovio/extrinsics" + std::to_string(camID), 1 );
     }
-    pubRadarExtrinsics_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>("rovio/extrinsics/radar", 1);
+    pubRadarExtrinsics_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>("rovio/radar/extrinsics", 1);
+    pubRadarFiltered_ = nh_.advertise<sensor_msgs::PointCloud2>("rovio/radar/filtered", 1);
     pubImuBias_ = nh_.advertise<sensor_msgs::Imu>("rovio/imu_biases", 1 );
 
     // Handle coordinate frame naming
@@ -598,16 +606,33 @@ class RovioNode{
     }
   }
 
+  TargetVector filterTargets(const TargetVector& targets)
+  {
+    TargetVector valid_targets;
+    valid_targets.reserve(targets.size());
+
+    for (const Target& t : targets)
+    {
+      if (mpDopplerUpdate_->validTarget(t))
+      {
+        valid_targets.push_back(t);
+      }
+    }
+
+    return valid_targets;
+  }
+
   /**
    * @brief Callback for radar point cloud measurements
    * 
    */
   void radarCallback(const sensor_msgs::PointCloud2::Ptr& cloud){
-    const double ts = cloud->header.stamp.toSec() + (18.4e-3)/2; // TODO: add time offset as parameter
-
     std::lock_guard<std::mutex> lock(m_filter_);
+
+    const double ts = cloud->header.stamp.toSec() + mpDopplerUpdate_->chirp_duration_ / 2;
+
     const auto imu_meas = mpFilter_->predictionTimeline_.measMap_.lower_bound(ts);
-    V3D BwWB = imu_meas->second.template get<mtPredictionMeas::_gyr>();
+    const V3D BwWB = imu_meas->second.template get<mtPredictionMeas::_gyr>();
     if (imu_meas == mpFilter_->predictionTimeline_.measMap_.end()){
       ROS_ERROR("Couldn't get IMU at mid radar chirp");
       ros::shutdown();
@@ -616,10 +641,17 @@ class RovioNode{
 
     if(init_state_.isInitialized()){
       const TargetVector targets = fromRos(cloud);
-      // TODO: filter point cloud
-      dopplerUpdateMeas_.template get<mtDopplerMeas::_aux>().targets_ = targets;
+      // filter targets
+      targets_filtered_ = filterTargets(targets);
+      if (targets_filtered_.empty())
+      {
+        ROS_WARN("Radar point cloud empty after filtering");
+        return;
+      }
 
-      mpFilter_->template addUpdateMeas<3>(dopplerUpdateMeas_, cloud->header.stamp.toSec());
+      dopplerUpdateMeas_.template get<mtDopplerMeas::_aux>().targets_ = targets_filtered_;
+
+      mpFilter_->template addUpdateMeas<3>(dopplerUpdateMeas_, ts);
       updateAndPublish();
     }
   }
@@ -1078,6 +1110,19 @@ class RovioNode{
 
           pubPatch_.publish(patchMsg_);
         }
+
+        double lastRadarTime;
+        std::get<3>(mpFilter_->updateTimelineTuple_).getLastTime(lastRadarTime);
+        // check if radar point cloud should be published
+        if (lastRadarTime == mpFilter_->safe_.t_) // TODO: improve
+        {
+          const pcl::PointCloud<radar::mmWavePoint> cloud = toPcl(targets_filtered_);
+          pcl::toROSMsg(cloud, targetsFilteredMsg_);
+          targetsFilteredMsg_.header.frame_id = radar_frame_;
+          targetsFilteredMsg_.header.stamp = ros::Time(mpFilter_->safe_.t_);
+          pubRadarFiltered_.publish(targetsFilteredMsg_);
+        }
+
         gotFirstMessages_ = true;
       }
     }

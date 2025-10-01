@@ -249,4 +249,6 @@ DopplerUpdate
         doppler_0 0.0016
     }
     MahalanobisTh0 3.84;    95% for 1 DoF
+    chirp_duration_s 18.4e-3
+    range_min_ 0.15
 }
