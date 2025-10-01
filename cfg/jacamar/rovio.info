@@ -67,12 +67,12 @@ Init
         vel_0 1.0;      X-Covariance of initial velocity [m^2/s^2]
         vel_1 1.0;      Y-Covariance of initial velocity [m^2/s^2]
         vel_2 1.0;      Z-Covariance of initial velocity [m^2/s^2]
-        acb_0 4e-4;     X-Covariance of initial accelerometer bias [m^2/s^4]
-        acb_1 4e-4;     Y-Covariance of initial accelerometer bias [m^2/s^4]
-        acb_2 4e-4;     Z-Covariance of initial accelerometer bias [m^2/s^4]
-        gyb_0 3e-4;     X-Covariance of initial gyroscope bias [rad^2/s^2]
-        gyb_1 3e-4;     Y-Covariance of initial gyroscope bias [rad^2/s^2]
-        gyb_2 3e-4;     Z-Covariance of initial gyroscope bias [rad^2/s^2]
+        acb_0 1e-5;     X-Covariance of initial accelerometer bias [m^2/s^4]
+        acb_1 1e-5;     Y-Covariance of initial accelerometer bias [m^2/s^4]
+        acb_2 1e-5;     Z-Covariance of initial accelerometer bias [m^2/s^4]
+        gyb_0 1e-8;     X-Covariance of initial gyroscope bias [rad^2/s^2]
+        gyb_1 1e-8;     Y-Covariance of initial gyroscope bias [rad^2/s^2]
+        gyb_2 1e-8;     Z-Covariance of initial gyroscope bias [rad^2/s^2]
         vep 0.0001;     Covariance of initial linear camera-IMU extrinsics, same for all entries [m^2]
         att_0 0.1;      X-Covariance of initial attitude [rad^2]
         att_1 0.1;      Y-Covariance of initial attitude [rad^2]
@@ -161,17 +161,17 @@ Prediction
         pos_0 1e-4;               X-covariance parameter of position prediction [m^2/s]
         pos_1 1e-4;               Y-covariance parameter of position prediction [m^2/s]
         pos_2 1e-4;               Z-covariance parameter of position prediction [m^2/s]
-        vel_0 4e-5; 4e-6            X-covariance parameter of velocity prediction [m^2/s^3]
+        vel_0 4e-5;               X-covariance parameter of velocity prediction [m^2/s^3]
         vel_1 4e-5;               Y-covariance parameter of velocity prediction [m^2/s^3]
         vel_2 4e-5;               Z-covariance parameter of velocity prediction [m^2/s^3]
-        acb_0 1e-8;               X-covariance parameter of accelerometer bias prediction [m^2/s^5]
-        acb_1 1e-8;               Y-covariance parameter of accelerometer bias prediction [m^2/s^5]
-        acb_2 1e-8;               Z-covariance parameter of accelerometer bias prediction [m^2/s^5]
-        gyb_0 3.8e-7;             X-covariance parameter of gyroscope bias prediction [rad^2/s^3]
-        gyb_1 3.8e-7;             Y-covariance parameter of gyroscope bias prediction [rad^2/s^3]
-        gyb_2 3.8e-7;             Z-covariance parameter of gyroscope bias prediction [rad^2/s^3]
-		vep 1e-8;               Covariance parameter of linear extrinsics prediction [m^2/s]
-        att_0 7.6e-7; 7.6e-7          X-Covariance parameter of attitude prediction [rad^2/s]
+        acb_0 6.4e-9;               X-covariance parameter of accelerometer bias prediction [m^2/s^5]
+        acb_1 6.4e-9;               Y-covariance parameter of accelerometer bias prediction [m^2/s^5]
+        acb_2 6.4e-9;               Z-covariance parameter of accelerometer bias prediction [m^2/s^5]
+        gyb_0 2.6e-12;             X-covariance parameter of gyroscope bias prediction [rad^2/s^3]
+        gyb_1 2.6e-12;             Y-covariance parameter of gyroscope bias prediction [rad^2/s^3]
+        gyb_2 2.6e-12;             Z-covariance parameter of gyroscope bias prediction [rad^2/s^3]
+        vep 1e-8;               Covariance parameter of linear extrinsics prediction [m^2/s]
+        att_0 7.6e-7;             X-Covariance parameter of attitude prediction [rad^2/s]
         att_1 7.6e-7;             Y-Covariance parameter of attitude prediction [rad^2/s]
         att_2 7.6e-7;             Z-Covariance parameter of attitude prediction [rad^2/s]
         vea 1e-8;               Covariance parameter of rotational extrinsics prediction [rad^2/s]
@@ -246,7 +246,7 @@ DopplerUpdate
 {
     UpdateNoise
     {
-        doppler_0 0.0016
+        doppler_0 0.002
     }
     MahalanobisTh0 3.84;    95% for 1 DoF
     chirp_duration_s 18.4e-3
