@@ -626,7 +626,7 @@ class RovioNode{
    * @brief Callback for radar point cloud measurements
    * 
    */
-  void radarCallback(const sensor_msgs::PointCloud2::Ptr& cloud){
+  void radarCallback(const sensor_msgs::PointCloud2ConstPtr& cloud){
     std::lock_guard<std::mutex> lock(m_filter_);
 
     const double ts = cloud->header.stamp.toSec() + mpDopplerUpdate_->chirp_duration_ / 2;
