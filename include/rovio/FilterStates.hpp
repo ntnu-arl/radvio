@@ -73,6 +73,9 @@ class StateAuxiliary: public LWF::AuxiliaryBase<StateAuxiliary<nMax,nLevels,patc
     }
     poseMeasRot_.setIdentity();
     poseMeasLin_.setZero();
+    activeTarget_ = 0;
+    qRM_.setIdentity();
+    MrMR_.setZero();
   };
 
   /** \brief Destructor
@@ -95,6 +98,9 @@ class StateAuxiliary: public LWF::AuxiliaryBase<StateAuxiliary<nMax,nLevels,patc
   QPD poseMeasRot_; /**<Groundtruth attitude measurement. qMI.*/
   Eigen::Vector3d poseMeasLin_; /**<Groundtruth position measurement. IrIM*/
   FeatureManager<nLevels,patchSize,nCam>* mpCurrentFeature_; /**<Pointer to active feature*/
+  int activeTarget_; /**<Active radar target ID. Needed in the Doppler update procedure*/
+  QPD qRM_; /**<Quaternion representing transform from IMU to Radar*/
+  V3D MrMR_; /**<Position vector from IMU to the Radar frame, expressed in IMU frame*/
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -116,7 +122,9 @@ LWF::ArrayElement<LWF::QuaternionElement,nCam>,
 LWF::ArrayElement<RobocentricFeatureElement,nMax>,
 LWF::ArrayElement<LWF::VectorElement<3>,nPose>,
 LWF::ArrayElement<LWF::QuaternionElement,nPose>,
-StateAuxiliary<nMax,nLevels,patchSize,nCam>>{
+StateAuxiliary<nMax,nLevels,patchSize,nCam>,
+LWF::VectorElement<3>,
+LWF::QuaternionElement>{
  public:
   typedef LWF::State<
       LWF::TH_multiple_elements<LWF::VectorElement<3>,4>,
@@ -126,7 +134,9 @@ StateAuxiliary<nMax,nLevels,patchSize,nCam>>{
       LWF::ArrayElement<RobocentricFeatureElement,nMax>,
       LWF::ArrayElement<LWF::VectorElement<3>,nPose>,
       LWF::ArrayElement<LWF::QuaternionElement,nPose>,
-      StateAuxiliary<nMax,nLevels,patchSize,nCam>> Base;  /**<State definition.*/
+      StateAuxiliary<nMax,nLevels,patchSize,nCam>,
+      LWF::VectorElement<3>,
+      LWF::QuaternionElement> Base;  /**<State definition.*/
   using Base::D_;
   using Base::E_;
   static constexpr int nMax_ = nMax;            /**<Max number of features.*/
@@ -145,11 +155,13 @@ StateAuxiliary<nMax,nLevels,patchSize,nCam>>{
   static constexpr unsigned int _pop = _fea+1;  /**<Idx. Additonial pose in state, linear part. IrIW.*/
   static constexpr unsigned int _poa = _pop+1;  /**<Idx. Additonial pose in state, rotational part. qWI.*/
   static constexpr unsigned int _aux = _poa+1;  /**<Idx. Auxiliary state.*/
+  static constexpr unsigned int _rep = _aux+1;  /**<Idx. Position Vector MrMR: Pointing from the IMU-Frame to the Radar-Frame, expressed in IMU-Coordinates.*/
+  static constexpr unsigned int _rea = _rep+1;  /**<Idx. Quaternion qRM: IMU-Coordinates to Radar-Coordinates.*/
 
   /** \brief Constructor
    */
   State(){
-    static_assert(_aux+1==E_,"Error with indices");
+    static_assert(_rea+1==E_,"Error with indices");
     this->template getName<_pos>() = "pos";
     this->template getName<_vel>() = "vel";
     this->template getName<_acb>() = "acb";
@@ -161,6 +173,8 @@ StateAuxiliary<nMax,nLevels,patchSize,nCam>>{
     this->template getName<_pop>() = "pop";
     this->template getName<_poa>() = "poa";
     this->template getName<_aux>() = "auxiliary";
+    this->template getName<_rep>() = "rep";
+    this->template getName<_rea>() = "rea";
   }
 
   /** \brief Destructor
@@ -315,6 +329,32 @@ StateAuxiliary<nMax,nLevels,patchSize,nCam>>{
     } else {
       return this->template get<_aux>().MrMC_[camID];
     }
+  }
+  //@}
+
+  //@{
+  /** \brief Get/Set the quaternion qRM, expressing the IMU-Frame in Radar-Coordinates (IMU Coordinates->Radar Coordinates).
+   *
+   *  @return a reference to the quaternion qRM (IMU Coordinates->Radar Coordinates).
+   */
+  inline QPD& qRM(){
+    return this->template get<_rea>();
+  }
+  inline const QPD& qRM() const{
+    return this->template get<_rea>();
+  }
+  //@}
+
+  //@{
+  /** \brief Get/Set the position vector pointing from the IMU-Frame to the Radar-Frame, expressed in IMU-Coordinates (IMU->Radar, expressed in IMU).
+   *
+   *  @return a reference to the position vector MrMR (IMU->Radar, expressed in IMU).
+   */
+  inline V3D& MrMR(){
+    return this->template get<_rep>();
+  }
+  inline const V3D& MrMR() const{
+    return this->template get<_rep>();
   }
   //@}
 
@@ -476,14 +516,16 @@ LWF::ArrayElement<LWF::VectorElement<3>,STATE::nCam_>,
 LWF::ArrayElement<LWF::VectorElement<3>,STATE::nCam_>,
 LWF::ArrayElement<LWF::VectorElement<3>,STATE::nMax_>,
 LWF::ArrayElement<LWF::VectorElement<3>,STATE::nPose_>,
-LWF::ArrayElement<LWF::VectorElement<3>,STATE::nPose_>>{
+LWF::ArrayElement<LWF::VectorElement<3>,STATE::nPose_>,
+LWF::TH_multiple_elements<LWF::VectorElement<3>,2>>{
  public:
   using LWF::State<LWF::TH_multiple_elements<LWF::VectorElement<3>,5>,
       LWF::ArrayElement<LWF::VectorElement<3>,STATE::nCam_>,
       LWF::ArrayElement<LWF::VectorElement<3>,STATE::nCam_>,
       LWF::ArrayElement<LWF::VectorElement<3>,STATE::nMax_>,
       LWF::ArrayElement<LWF::VectorElement<3>,STATE::nPose_>,
-      LWF::ArrayElement<LWF::VectorElement<3>,STATE::nPose_>>::E_;
+      LWF::ArrayElement<LWF::VectorElement<3>,STATE::nPose_>,
+      LWF::TH_multiple_elements<LWF::VectorElement<3>,2>>::E_;
   static constexpr unsigned int _pos = 0;       /**<Idx. Position Vector WrWM: Pointing from the World-Frame to the IMU-Frame, expressed in World-Coordinates.*/
   static constexpr unsigned int _vel = _pos+1;  /**<Idx. Velocity Vector MvM: Absolute velocity of the IMU-Frame, expressed in IMU-Coordinates.*/
   static constexpr unsigned int _acb = _vel+1;  /**<Idx. Additive bias on accelerometer.*/
@@ -494,11 +536,13 @@ LWF::ArrayElement<LWF::VectorElement<3>,STATE::nPose_>>{
   static constexpr unsigned int _fea = _vea+1;  /**<Idx. Feature parametrizations (bearing + depth parameter), array.*/
   static constexpr unsigned int _pop = _fea+1;  /**<Idx. Additonial pose in state, linear part.*/
   static constexpr unsigned int _poa = _pop+1;  /**<Idx. Additonial pose in state, rotational part.*/
+  static constexpr unsigned int _rep = _poa+1;  /**<Idx. Position Vector MrMR: Pointing from the IMU-Frame to the Radar-Frame, expressed in IMU-Coordinates.*/
+  static constexpr unsigned int _rea = _rep+1;  /**<Idx. Quaternion qRM: IMU-Coordinates to Radar-Coordinates.*/
 
   /** \brief Constructor
    */
   PredictionNoise(){
-    static_assert(_poa+1==E_,"Error with indices");
+    static_assert(_rea+1==E_,"Error with indices");
     this->template getName<_pos>() = "pos";
     this->template getName<_vel>() = "vel";
     this->template getName<_acb>() = "acb";
@@ -509,6 +553,8 @@ LWF::ArrayElement<LWF::VectorElement<3>,STATE::nPose_>>{
     this->template getName<_fea>() = "fea";
     this->template getName<_pop>() = "pop";
     this->template getName<_poa>() = "poa";
+    this->template getName<_rep>() = "rep";
+    this->template getName<_rea>() = "rea";
   }
 
   /** \brief Destructor

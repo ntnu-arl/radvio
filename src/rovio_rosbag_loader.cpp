@@ -159,6 +159,8 @@ int main(int argc, char** argv){
   nh_private.param("cam0_topic_name", cam0_topic_name, cam0_topic_name);
   std::string cam1_topic_name = "/cam1/image_raw";
   nh_private.param("cam1_topic_name", cam1_topic_name, cam1_topic_name);
+  std::string radar_topic_name = "/radar/cloud";
+  nh_private.param("radar_topic_name", radar_topic_name, radar_topic_name);
   std::string odometry_topic_name = rovioNode.pubOdometry_.getTopic();
   std::string transform_topic_name = rovioNode.pubTransform_.getTopic();
   std::string extrinsics_topic_name[mtFilter::mtState::nCam_];
@@ -173,6 +175,7 @@ int main(int argc, char** argv){
   topics.push_back(std::string(imu_topic_name));
   topics.push_back(std::string(cam0_topic_name));
   topics.push_back(std::string(cam1_topic_name));
+  topics.push_back(std::string(radar_topic_name));
   rosbag::View view(bagIn, rosbag::TopicQuery(topics));
 
 
@@ -190,6 +193,10 @@ int main(int argc, char** argv){
     if(it->getTopic() == cam1_topic_name){
       sensor_msgs::ImageConstPtr imgMsg = it->instantiate<sensor_msgs::Image>();
       if (imgMsg != NULL) rovioNode.imgCallback1(imgMsg);
+    }
+    if (it->getTopic() == radar_topic_name){
+      sensor_msgs::PointCloud2ConstPtr cloudMsg = it->instantiate<sensor_msgs::PointCloud2>();
+      if (cloudMsg != NULL) rovioNode.radarCallback(cloudMsg);
     }
     ros::spinOnce();
 

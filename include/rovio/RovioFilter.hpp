@@ -37,6 +37,7 @@
 #include "rovio/VelocityUpdate.hpp"
 #include "rovio/ImuPrediction.hpp"
 #include "rovio/MultiCamera.hpp"
+#include "rovio/DopplerUpdate.hpp"
 
 namespace rovio {
 /** \brief Class, defining the Rovio Filter.
@@ -47,12 +48,14 @@ template<typename FILTERSTATE>
 class RovioFilter:public LWF::FilterBase<ImuPrediction<FILTERSTATE>,
                                          ImgUpdate<FILTERSTATE>,
                                          PoseUpdate<FILTERSTATE,(int)(FILTERSTATE::mtState::nPose_>0)-1,(int)(FILTERSTATE::mtState::nPose_>1)*2-1>,
-                                         VelocityUpdate<FILTERSTATE>>{
+                                         VelocityUpdate<FILTERSTATE>,
+                                         DopplerUpdate<FILTERSTATE>>{
  public:
   typedef LWF::FilterBase<ImuPrediction<FILTERSTATE>,
                           ImgUpdate<FILTERSTATE>,
                           PoseUpdate<FILTERSTATE,(int)(FILTERSTATE::mtState::nPose_>0)-1,(int)(FILTERSTATE::mtState::nPose_>1)*2-1>,
-                          VelocityUpdate<FILTERSTATE>> Base;
+                          VelocityUpdate<FILTERSTATE>,
+                          DopplerUpdate<FILTERSTATE>> Base;
   using Base::init_;
   using Base::reset;
   using Base::predictionTimeline_;
@@ -87,6 +90,8 @@ class RovioFilter:public LWF::FilterBase<ImuPrediction<FILTERSTATE>,
     subHandlers_["PoseUpdate"] = &std::get<1>(mUpdates_);
     subHandlers_.erase("Update2");
     subHandlers_["VelocityUpdate"] = &std::get<2>(mUpdates_);
+    subHandlers_.erase("Update3");
+    subHandlers_["DopplerUpdate"] = &std::get<3>(mUpdates_);
     boolRegister_.registerScalar("Common.doVECalibration",init_.state_.aux().doVECalibration_);
     intRegister_.registerScalar("Common.depthType",depthTypeInt_);
     for(int camID=0;camID<mtState::nCam_;camID++){
@@ -110,6 +115,23 @@ class RovioFilter:public LWF::FilterBase<ImuPrediction<FILTERSTATE>,
       doubleRegister_.registerVector("Camera" + std::to_string(camID) + ".MrMC",init_.state_.MrMC(camID));
       doubleRegister_.registerQuaternion("Camera" + std::to_string(camID) + ".qCM",init_.state_.qCM(camID));
     }
+    doubleRegister_.registerVector("Radar.MrMR",init_.state_.aux().MrMR_);
+    doubleRegister_.registerQuaternion("Radar.qRM",init_.state_.aux().qRM_);
+    doubleRegister_.removeScalarByVar(init_.state_.MrMR()(0));
+    doubleRegister_.removeScalarByVar(init_.state_.MrMR()(1));
+    doubleRegister_.removeScalarByVar(init_.state_.MrMR()(2));
+    doubleRegister_.removeScalarByVar(init_.state_.qRM().toImplementation().w());
+    doubleRegister_.removeScalarByVar(init_.state_.qRM().toImplementation().x());
+    doubleRegister_.removeScalarByVar(init_.state_.qRM().toImplementation().y());
+    doubleRegister_.removeScalarByVar(init_.state_.qRM().toImplementation().z());
+    for(int j=0;j<3;j++){
+      doubleRegister_.removeScalarByVar(init_.cov_(mtState::template getId<mtState::_rep>()+j,mtState::template getId<mtState::_rep>()+j));
+      doubleRegister_.removeScalarByVar(init_.cov_(mtState::template getId<mtState::_rea>()+j,mtState::template getId<mtState::_rea>()+j));
+      doubleRegister_.registerScalar("Init.Covariance.rep",init_.cov_(mtState::template getId<mtState::_rep>()+j,mtState::template getId<mtState::_rep>()+j));
+      doubleRegister_.registerScalar("Init.Covariance.rea",init_.cov_(mtState::template getId<mtState::_rea>()+j,mtState::template getId<mtState::_rea>()+j));
+    }
+    doubleRegister_.registerVector("Radar.MrMR",init_.state_.MrMR());
+    doubleRegister_.registerQuaternion("Radar.qRM",init_.state_.qRM());
     for(int i=0;i<mtState::nPose_;i++){
       doubleRegister_.removeScalarByVar(init_.state_.poseLin(i)(0));
       doubleRegister_.removeScalarByVar(init_.state_.poseLin(i)(1));

@@ -86,6 +86,12 @@ class ImuPrediction: public LWF::Prediction<FILTERSTATE>{
         doubleRegister_.removeScalarByVar(prenoiP_(mtNoise::template getId<mtNoise::_poa>(i)+j,mtNoise::template getId<mtNoise::_poa>(i)+j));
       }
     }
+    for(int j=0;j<3;j++){
+      doubleRegister_.removeScalarByVar(prenoiP_(mtNoise::template getId<mtNoise::_rep>()+j,mtNoise::template getId<mtNoise::_rep>()+j));
+      doubleRegister_.removeScalarByVar(prenoiP_(mtNoise::template getId<mtNoise::_rea>()+j,mtNoise::template getId<mtNoise::_rea>()+j));
+      doubleRegister_.registerScalar("PredictionNoise.rep",prenoiP_(mtNoise::template getId<mtNoise::_rep>()+j,mtNoise::template getId<mtNoise::_rep>()+j));
+      doubleRegister_.registerScalar("PredictionNoise.rea",prenoiP_(mtNoise::template getId<mtNoise::_rea>()+j,mtNoise::template getId<mtNoise::_rea>()+j));
+    }
     disablePreAndPostProcessingWarning_ = true;
   };
 
@@ -146,6 +152,9 @@ class ImuPrediction: public LWF::Prediction<FILTERSTATE>{
       output.poseRot(i) = dQ*state.poseRot(i);
     }
     output.aux().wMeasCov_ = prenoiP_.template block<3,3>(mtNoise::template getId<mtNoise::_att>(),mtNoise::template getId<mtNoise::_att>())/dt;
+    output.MrMR() = state.MrMR()+noise.template get<mtNoise::_rep>()*sqrt(dt);
+    dQ = dQ.exponentialMap(noise.template get<mtNoise::_rea>()*sqrt(dt));
+    output.qRM() = dQ*state.qRM();
     output.fix();
     if(detectInertialMotion(state,meas_)){
       output.aux().timeSinceLastInertialMotion_ = 0;
@@ -238,6 +247,8 @@ class ImuPrediction: public LWF::Prediction<FILTERSTATE>{
       F.template block<3,3>(mtState::template getId<mtState::_pop>(i),mtState::template getId<mtState::_pop>(i)) = M3D::Identity();
       F.template block<3,3>(mtState::template getId<mtState::_poa>(i),mtState::template getId<mtState::_poa>(i)) = M3D::Identity();
     }
+    F.template block<3,3>(mtState::template getId<mtState::_rep>(),mtState::template getId<mtState::_rep>()) = M3D::Identity();
+    F.template block<3,3>(mtState::template getId<mtState::_rea>(),mtState::template getId<mtState::_rea>()) = M3D::Identity();
   }
   void jacNoise(MXD& G, const mtState& state, double dt) const{
     const V3D imuRor = meas_.template get<mtMeas::_gyr>()-state.gyb();
@@ -281,6 +292,8 @@ class ImuPrediction: public LWF::Prediction<FILTERSTATE>{
              )*sqrt(dt)*MPD(state.qCM(camID)).matrix();
       }
     }
+    G.template block<3,3>(mtState::template getId<mtState::_rep>(),mtNoise::template getId<mtNoise::_rep>()) = M3D::Identity()*sqrt(dt);
+    G.template block<3,3>(mtState::template getId<mtState::_rea>(),mtNoise::template getId<mtNoise::_rea>()) = M3D::Identity()*sqrt(dt);
   }
   bool detectInertialMotion(const mtState& state, const mtMeas& meas) const{
     const V3D imuRor = meas.template get<mtMeas::_gyr>()-state.gyb();
