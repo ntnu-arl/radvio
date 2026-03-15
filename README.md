@@ -46,7 +46,7 @@ Exemplary launch files for running the node and running from the bag can be seen
 
 ## Acknowledgements
 
-* We thank M. Bloesch for ROVIO ([IROS 2015](http://dx.doi.org/10.3929/ethz-a-010566547), [IJRR 2017](http://dx.doi.org/10.1177/0278364917728574)), upon which this work is based.
+* We thank M. Bloesch, M. Burri, S. Omari, M. Hutter, and R. Siegwart for ROVIO ([IROS 2015](http://dx.doi.org/10.3929/ethz-a-010566547), [IJRR 2017](http://dx.doi.org/10.1177/0278364917728574)), upon which this work is based.
 * We thank Nikhil Khedekar for initial support with voxel mapping.
 
 ## Reference
