@@ -7,7 +7,7 @@ This repository contains the implementation of the work [Tightly-Coupled Radar-V
 
 For more information, please see our [preprint]().
 
-[![](https://img.youtube.com/vi/VIDEO_ID/maxresdefault.jpg)](https://www.youtube.com/watch?v=VIDEO_ID)
+[![](https://img.youtube.com/vi/KP5RGExULNM/maxresdefault.jpg)](https://www.youtube.com/watch?v=KP5RGExULNM)
 
 ## Building
 
