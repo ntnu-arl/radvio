@@ -1,12 +1,12 @@
-#include "rovio/Camera.hpp"
+#include "radvio/Camera.hpp"
 #include "gtest/gtest.h"
 #include <assert.h>
 
-#include "../include/rovio/ImagePyramid.hpp"
-#include "../include/rovio/FeatureManager.hpp"
-#include "../include/rovio/MultilevelPatchAlignment.hpp"
+#include "../include/radvio/ImagePyramid.hpp"
+#include "../include/radvio/FeatureManager.hpp"
+#include "../include/radvio/MultilevelPatchAlignment.hpp"
 
-using namespace rovio;
+using namespace radvio;
 
 class MLPTesting : public virtual ::testing::Test {
  protected:

@@ -1,16 +1,16 @@
 cmake_minimum_required (VERSION 2.6)
-project(rovio)
+project(radvio)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -march=native")
-set(ROVIO_NMAXFEATURE 25 CACHE STRING "Number of features for ROVIO")
-set(ROVIO_NCAM 1 CACHE STRING "Number of enabled cameras")
-set(ROVIO_NLEVELS 4 CACHE STRING "Number of image leavels for the features")
-set(ROVIO_PATCHSIZE 6 CACHE STRING "Size of patch (edge length in pixel)")
-set(ROVIO_NPOSE 0 CACHE STRING "Additional estimated poses for external pose measurements")
-add_definitions(-DROVIO_NMAXFEATURE=${ROVIO_NMAXFEATURE})
-add_definitions(-DROVIO_NCAM=${ROVIO_NCAM})
-add_definitions(-DROVIO_NLEVELS=${ROVIO_NLEVELS})
-add_definitions(-DROVIO_PATCHSIZE=${ROVIO_PATCHSIZE})
-add_definitions(-DROVIO_NPOSE=${ROVIO_NPOSE})
+set(RADVIO_NMAXFEATURE 25 CACHE STRING "Number of features for RADVIO")
+set(RADVIO_NCAM 1 CACHE STRING "Number of enabled cameras")
+set(RADVIO_NLEVELS 4 CACHE STRING "Number of image leavels for the features")
+set(RADVIO_PATCHSIZE 6 CACHE STRING "Size of patch (edge length in pixel)")
+set(RADVIO_NPOSE 0 CACHE STRING "Additional estimated poses for external pose measurements")
+add_definitions(-DRADVIO_NMAXFEATURE=${RADVIO_NMAXFEATURE})
+add_definitions(-DRADVIO_NCAM=${RADVIO_NCAM})
+add_definitions(-DRADVIO_NLEVELS=${RADVIO_NLEVELS})
+add_definitions(-DRADVIO_PATCHSIZE=${RADVIO_PATCHSIZE})
+add_definitions(-DRADVIO_NPOSE=${RADVIO_NPOSE})
 
 add_subdirectory(lightweight_filtering)
 
@@ -26,7 +26,7 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 find_package(OpenCV REQUIRED COMPONENTS core highgui imgproc features2d)
 
 if(MAKE_SCENE)
-	message(STATUS "Building ROVIO with openGL Scene Visualization")
+	message(STATUS "Building RadVIO with openGL Scene Visualization")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMAKE_SCENE=1")
 	find_package(GLEW REQUIRED)
 	include_directories(${GLEW_INCLUDE_DIRS})
@@ -61,7 +61,7 @@ message("PCL Path:" ${PCL_DIR})
 ##################### Install ROS stuff #####################
 find_package(catkin REQUIRED COMPONENTS
 	lightweight_filtering
-  	kindr
+  kindr
 	roscpp
 	roslib
 	cv_bridge
@@ -90,7 +90,7 @@ catkin_package(
     LIBRARIES ${PROJECT_NAME}
 	CATKIN_DEPENDS
 	lightweight_filtering
-  	kindr
+  kindr
 	roscpp
 	roslib
 	cv_bridge
@@ -113,14 +113,14 @@ else()
 	add_library(${PROJECT_NAME} src/Camera.cpp src/FeatureCoordinates.cpp src/FeatureDistance.cpp)
 endif()
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${YamlCpp_LIBRARIES} ${OpenMP_EXE_LINKER_FLAGS} ${OPENGL_LIBRARIES} ${GLUT_LIBRARY} ${GLEW_LIBRARIES} ${OpenCV_LIBRARIES})
-add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} rovio_generate_messages_cpp)
+add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} radvio_generate_messages_cpp)
 
-add_executable(rovio_node src/rovio_node.cpp)
-target_link_libraries(rovio_node ${PROJECT_NAME})
+add_executable(radvio_node src/radvio_node.cpp)
+target_link_libraries(radvio_node ${PROJECT_NAME})
 
-add_executable(rovio_rosbag_loader src/rovio_rosbag_loader.cpp)
-target_link_libraries(rovio_rosbag_loader ${PROJECT_NAME})
-add_dependencies(rovio_rosbag_loader ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_executable(radvio_rosbag_loader src/radvio_rosbag_loader.cpp)
+target_link_libraries(radvio_rosbag_loader ${PROJECT_NAME})
+add_dependencies(radvio_rosbag_loader ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 add_executable(feature_tracker_node src/feature_tracker_node.cpp)
 target_link_libraries(feature_tracker_node ${PROJECT_NAME})
@@ -138,4 +138,11 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/gtest/")
 	add_executable(test_mlp src/test_mlp.cpp src/Camera.cpp src/FeatureCoordinates.cpp src/FeatureDistance.cpp)
 	target_link_libraries(test_mlp gtest_main gtest pthread ${catkin_LIBRARIES} ${YamlCpp_LIBRARIES})
 	add_test(test_mlp test_mlp)
+endif()
+
+if (CATKIN_ENABLE_TESTING)
+  # find_package(rostest REQUIRED)
+
+	catkin_add_gtest(test_sloxels src/test_sloxels.cpp)
+	target_link_libraries(test_sloxels ${catkin_LIBRARIES})
 endif()

@@ -1,9 +1,9 @@
 #include "gtest/gtest.h"
 #include <assert.h>
 
-#include "rovio/Patch.hpp"
+#include "radvio/Patch.hpp"
 
-using namespace rovio;
+using namespace radvio;
 
 class PatchTesting : public virtual ::testing::Test {
  protected:

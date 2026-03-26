@@ -26,12 +26,45 @@
 *
 */
 
-#include "../include/radvio/featureTracker.hpp"
+#ifndef RADVIO_PIXELOUTPUT_HPP_
+#define RADVIO_PIXELOUTPUT_HPP_
 
-int main(int argc, char** argv) {
-  ros::init(argc, argv, "FeatureTrackerNode");
-  ros::NodeHandle nh;
-  radvio::FeatureTrackerNode featureTrackerNode(nh);
-  ros::spin();
-  return 0;
+#include "lightweight_filtering/common.hpp"
+#include "lightweight_filtering/CoordinateTransform.hpp"
+#include "radvio/CoordinateTransform/FeatureOutput.hpp"
+
+namespace radvio {
+
+class PixelOutput: public LWF::State<LWF::VectorElement<2>>{
+ public:
+  static constexpr unsigned int _pix = 0;
+  PixelOutput(){
+  }
+  virtual ~PixelOutput(){};
+  cv::Point2f getPoint2f() const{
+    return cv::Point2f(static_cast<float>(this->get<_pix>()(0)),static_cast<float>(this->get<_pix>()(1)));
+  }
+};
+
+class PixelOutputCT:public LWF::CoordinateTransform<FeatureOutput,PixelOutput>{
+ public:
+  typedef LWF::CoordinateTransform<FeatureOutput,PixelOutput> Base;
+  typedef typename Base::mtInput mtInput;
+  typedef typename Base::mtOutput mtOutput;
+  PixelOutputCT(){
+  };
+  virtual ~PixelOutputCT(){};
+  void evalTransform(mtOutput& output, const mtInput& input) const{
+    cv::Point2f c = input.c().get_c();
+    output.template get<mtOutput::_pix>() = Eigen::Vector2d(c.x,c.y);
+  }
+  void jacTransform(MXD& J, const mtInput& input) const{
+    J.setZero();
+    J.template block<2,2>(mtOutput::template getId<mtOutput::_pix>(),mtInput::template getId<mtInput::_fea>()) = input.c().get_J();
+  }
+};
+
 }
+
+
+#endif /* RADVIO_PIXELOUTPUT_HPP_ */

@@ -1,7 +1,7 @@
-#include "rovio/Camera.hpp"
+#include "radvio/Camera.hpp"
 #include "yaml-cpp/yaml.h"
 
-namespace rovio{
+namespace radvio{
 
   Camera::Camera(){
     k1_ = 0.0; k2_ = 0.0; k3_ = 0.0; k4_ = 0.0; k5_ = 0.0; k6_ = 0.0;

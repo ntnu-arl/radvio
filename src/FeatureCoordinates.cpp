@@ -1,6 +1,6 @@
-#include "rovio/FeatureCoordinates.hpp"
+#include "radvio/FeatureCoordinates.hpp"
 
-namespace rovio{
+namespace radvio{
 
   FeatureCoordinates::FeatureCoordinates(){
     mpCamera_ = nullptr;

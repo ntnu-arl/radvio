@@ -26,12 +26,46 @@
 *
 */
 
-#include "../include/radvio/featureTracker.hpp"
+#ifndef RADVIO_EXCEPTION_HPP_
+#define RADVIO_EXCEPTION_HPP_
 
-int main(int argc, char** argv) {
-  ros::init(argc, argv, "FeatureTrackerNode");
-  ros::NodeHandle nh;
-  radvio::FeatureTrackerNode featureTrackerNode(nh);
-  ros::spin();
-  return 0;
+#include <string>
+#include <iostream>
+#include <exception>
+#include <typeinfo>
+
+#define RADVIO_THROW(exceptionType) {                    \
+  throw exceptionType(__FUNCTION__,__FILE__,__LINE__);  \
 }
+
+namespace radvio {
+  struct ExceptionBase : public std::exception
+  {
+    std::string message_;
+    std::string function_;
+    std::string file_;
+    int line_;
+    ExceptionBase(std::string message,std::string function, std::string file, int line){
+      message_ = message;
+      function_ = function;
+      file_ = file;
+      line_ = line;
+    }
+    virtual ~ExceptionBase(){};
+    virtual const char * what () const throw ()
+    {
+      return (file_ + ":" + std::to_string(line_) + ": " + function_ + "()" + " " + message_).c_str();
+    }
+  };
+
+  struct CameraNullPtrException : public ExceptionBase
+  {
+    CameraNullPtrException(std::string function, std::string file, int line): ExceptionBase("Camera pointer is null!",function,file,line){}
+  };
+}
+
+/* Usage:
+ * RADVIO_THROW(radvio::CameraNullPtrException);
+ */
+
+#endif /* RADVIO_EXCEPTION_HPP_ */

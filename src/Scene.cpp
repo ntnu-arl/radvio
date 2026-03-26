@@ -1,6 +1,6 @@
-#include <rovio/Scene.hpp>
+#include <radvio/Scene.hpp>
 
-namespace rovio{
+namespace radvio{
 
   SceneObject::SceneObject(){
     glGenBuffers(1, &VBO_);

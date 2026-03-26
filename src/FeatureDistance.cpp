@@ -1,8 +1,8 @@
-#include "rovio/FeatureDistance.hpp"
+#include "radvio/FeatureDistance.hpp"
 #include <complex>
 #include <iostream>
 
-namespace rovio {
+namespace radvio {
 
   FeatureDistance::FeatureDistance(const Type& type){
     setType(type);

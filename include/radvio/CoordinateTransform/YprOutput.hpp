@@ -26,12 +26,49 @@
 *
 */
 
-#include "../include/radvio/featureTracker.hpp"
+#ifndef RADVIO_YPROUTPUT_HPP_
+#define RADVIO_YPROUTPUT_HPP_
 
-int main(int argc, char** argv) {
-  ros::init(argc, argv, "FeatureTrackerNode");
-  ros::NodeHandle nh;
-  radvio::FeatureTrackerNode featureTrackerNode(nh);
-  ros::spin();
-  return 0;
+#include "lightweight_filtering/common.hpp"
+#include "lightweight_filtering/CoordinateTransform.hpp"
+
+namespace radvio {
+
+class AttitudeOutput: public LWF::State<LWF::QuaternionElement>{
+ public:
+  static constexpr unsigned int _att = 0;
+  AttitudeOutput(){
+  }
+  virtual ~AttitudeOutput(){};
+};
+
+class YprOutput: public LWF::State<LWF::VectorElement<3>>{
+ public:
+  static constexpr unsigned int _ypr = 0;
+  YprOutput(){
+  }
+  virtual ~YprOutput(){};
+
+
+};
+
+class AttitudeToYprCT:public LWF::CoordinateTransform<AttitudeOutput,YprOutput>{
+ public:
+  typedef LWF::CoordinateTransform<AttitudeOutput,YprOutput> Base;
+  typedef typename Base::mtInput mtInput;
+  typedef typename Base::mtOutput mtOutput;
+  AttitudeToYprCT(){};
+  virtual ~AttitudeToYprCT(){};
+  void evalTransform(mtOutput& output, const mtInput& input) const{
+    output.template get<mtOutput::_ypr>() = kindr::EulerAnglesZyxD(input.template get<mtInput::_att>()).vector();
+  }
+  void jacTransform(MXD& J, const mtInput& input) const{
+    kindr::EulerAnglesZyxD zyx(input.template get<mtInput::_att>());
+    J = zyx.getMappingFromLocalAngularVelocityToDiff()*MPD(input.template get<mtInput::_att>().inverted()).matrix();
+  }
+};
+
 }
+
+
+#endif /* RADVIO_YPROUTPUT_HPP_ */

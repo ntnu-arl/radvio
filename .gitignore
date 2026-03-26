@@ -28,3 +28,6 @@ rovio_custom.info
 
 html/
 latex/
+
+# python
+__pycache__/
