@@ -1,13 +1,13 @@
 # RadVIO
 Tightly-Coupled <b>Rad</b>ar-<b>V</b>isual-<b>I</b>nertial <b>O</b>dometry
 
-[![arXiv](https://img.shields.io/badge/arXiv-1234.56789-b31b1b.svg)](https://arxiv.org/abs/1234.56789)
+[![arXiv](https://img.shields.io/badge/arXiv-2603.23052-b31b1b.svg)](https://arxiv.org/abs/2603.23052)
 
-This repository contains the implementation of the work [Tightly-Coupled Radar-Visual-Inertial Odometry](), accepted for publication at the 2026 European Control Conference (ECC). The method augments visual-inertial odometry (VIO) to showcase more robust performance in environments with visual degradation through the radar fusion (via Doppler updates and radar-based feature depth intialization). The method can operate in either vision- or radar-only modes, thus making it also robust to temporary dropout from either exteroceptive sensor. This method is developed over ROVIO ([IROS 2015](http://dx.doi.org/10.3929/ethz-a-010566547), [IJRR 2017](http://dx.doi.org/10.1177/0278364917728574)).
+This repository contains the implementation of the work [Tightly-Coupled Radar-Visual-Inertial Odometry](https://arxiv.org/abs/2603.23052), accepted for publication at the 2026 European Control Conference (ECC). The method augments visual-inertial odometry (VIO) to showcase more robust performance in environments with visual degradation through the radar fusion (via Doppler updates and radar-based feature depth intialization). The method can operate in either vision- or radar-only modes, thus making it also robust to temporary dropout from either exteroceptive sensor. This method is developed over ROVIO ([IROS 2015](http://dx.doi.org/10.3929/ethz-a-010566547), [IJRR 2017](http://dx.doi.org/10.1177/0278364917728574)).
 
-For more information, please see our [preprint]().
+For more information, please see our [preprint](https://arxiv.org/abs/2603.23052).
 
-[![](https://img.youtube.com/vi/VIDEO_ID/maxresdefault.jpg)](https://www.youtube.com/watch?v=VIDEO_ID)
+[![Video Title Screen](https://img.youtube.com/vi/KP5RGExULNM/maxresdefault.jpg)](https://www.youtube.com/watch?v=KP5RGExULNM)
 
 ## Building
 
@@ -46,7 +46,7 @@ Exemplary launch files for running the node and running from the bag can be seen
 
 ## Acknowledgements
 
-* We thank M. Bloesch for ROVIO ([IROS 2015](http://dx.doi.org/10.3929/ethz-a-010566547), [IJRR 2017](http://dx.doi.org/10.1177/0278364917728574)), upon which this work is based.
+* We thank M. Bloesch, M. Burri, S. Omari, M. Hutter, and R. Siegwart for ROVIO ([IROS 2015](http://dx.doi.org/10.3929/ethz-a-010566547), [IJRR 2017](http://dx.doi.org/10.1177/0278364917728574)), upon which this work is based.
 * We thank Nikhil Khedekar for initial support with voxel mapping.
 
 ## Reference
@@ -55,6 +55,11 @@ If you use this work in your research, please cite the following publication:
 
 ```bibtex
 @misc{nissov2026radvio,
-  arxiv
+  title={Tightly-Coupled Radar-Visual-Inertial Odometry}, 
+  author={Morten Nissov and Mohit Singh and Kostas Alexis},
+  year=2026,
+  eprint={2603.23052},
+  archivePrefix={arXiv},
+  primaryClass={cs.RO},
 }
 ```
