@@ -1283,7 +1283,7 @@ class RadvioNode{
             {
               for (const Eigen::Vector4d& point : pair.second.points_)
               {
-                map.emplace_back(point.x(), point.y(), point.z());
+                map.points.emplace_back(point.x(), point.y(), point.z());
               }
             }
             pcl::toROSMsg(map, radarMapMsg_);
