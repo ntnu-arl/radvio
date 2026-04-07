@@ -778,7 +778,7 @@ class RadvioNode{
     std::lock_guard<std::mutex> lock(m_filter_);
     if(init_state_.isInitialized()){
 
-      double altitude = (44330.76923)*(std::pow(barometer->fluid_pressure / 101325.0, 0.1902630958) - 1.0);
+      double altitude = (44330.76923)*(std::pow(101325.0/barometer->fluid_pressure, 0.1902630958) - 1.0);
       std::cout << "Altitude: " << altitude << std::endl;
 
       if (!baro_offset_initialized_) {
