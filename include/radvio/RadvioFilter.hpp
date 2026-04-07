@@ -71,7 +71,8 @@
 #include "radvio/ImuPrediction.hpp"
 #include "radvio/MultiCamera.hpp"
 #include "radvio/DopplerUpdate.hpp"
-
+#include "radvio/BaroUpdate.hpp"
+  
 namespace radvio {
 /** \brief Class, defining the Radvio Filter.
  *
@@ -82,13 +83,15 @@ class RadvioFilter:public LWF::FilterBase<ImuPrediction<FILTERSTATE>,
                                          ImgUpdate<FILTERSTATE>,
                                          PoseUpdate<FILTERSTATE,(int)(FILTERSTATE::mtState::nPose_>0)-1,(int)(FILTERSTATE::mtState::nPose_>1)*2-1>,
                                          VelocityUpdate<FILTERSTATE>,
-                                         DopplerUpdate<FILTERSTATE>>{
+                                         DopplerUpdate<FILTERSTATE>,
+                                         BaroUpdate<FILTERSTATE,(int)(FILTERSTATE::mtState::nPose_>0)-1,(int)(FILTERSTATE::mtState::nPose_>1)*2-1>>{
  public:
   typedef LWF::FilterBase<ImuPrediction<FILTERSTATE>,
                           ImgUpdate<FILTERSTATE>,
                           PoseUpdate<FILTERSTATE,(int)(FILTERSTATE::mtState::nPose_>0)-1,(int)(FILTERSTATE::mtState::nPose_>1)*2-1>,
                           VelocityUpdate<FILTERSTATE>,
-                          DopplerUpdate<FILTERSTATE>> Base;
+                          DopplerUpdate<FILTERSTATE>,
+                          BaroUpdate<FILTERSTATE,(int)(FILTERSTATE::mtState::nPose_>0)-1,(int)(FILTERSTATE::mtState::nPose_>1)*2-1>> Base;
   using Base::init_;
   using Base::reset;
   using Base::predictionTimeline_;
@@ -128,6 +131,8 @@ class RadvioFilter:public LWF::FilterBase<ImuPrediction<FILTERSTATE>,
     subHandlers_["VelocityUpdate"] = &std::get<2>(mUpdates_);
     subHandlers_.erase("Update3");
     subHandlers_["DopplerUpdate"] = &std::get<3>(mUpdates_);
+    subHandlers_.erase("Update4");
+    subHandlers_["BaroUpdate"] = &std::get<4>(mUpdates_);
     boolRegister_.registerScalar("Common.doVECalibration",init_.state_.aux().doVECalibration_);
     boolRegister_.registerScalar("Common.doRECalibration",init_.state_.aux().doRECalibration_);
     intRegister_.registerScalar("Common.depthType",depthTypeInt_);
