@@ -10,6 +10,7 @@ Common
 Camera0
 {
   CalibrationFile  ;            Camera-Calibration file for intrinsics
+  ImageMaskFile ;
   qCM_x  0.5543417213240229;                               X-entry of IMU to Camera quaterion (Hamilton)
   qCM_y  -0.5433799916950063;                               Y-entry of IMU to Camera quaterion (Hamilton)
   qCM_z  0.44199772312966146;                               Z-entry of IMU to Camera quaterion (Hamilton)
