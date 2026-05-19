@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
-  <arg name="rosbag_in" default="data.bag"/>
-  <arg name="rosbag_out" default="radvio"/>
+  <arg name="rosbag_in" default="/home/root/data/bags/Flight1/voxl2_2026-04-17-11-00-57_1.bag"/>
+  <arg name="rosbag_out" default="/home/root/data/out/radvio"/>
 
   <arg name="image_skip_factor" default="0"/>
   <arg name="camera_topic" default="/cam0/image_raw"/>
@@ -9,7 +9,7 @@
 
   <node pkg="radvio" type="radvio_rosbag_loader" name="radvio" output="screen" clear_params="true">
     <param name="filter_config" value="$(find radvio)/cfg/radvio.info"/>
-    <param name="camera0_config" value="$(find radvio)/cfg/cam0.yaml"/>
+    <param name="camera0_config" value="$(find radvio)/cfg/radvio_cam.yaml"/>
 
     <param name="rosbag_filename" value="$(arg rosbag_in)"/>
     <param name="filename_out" value="$(arg rosbag_out)"/>

@@ -1,5 +1,5 @@
 ; You can partially override parameter set in this file by creating your own subset of parameter in a separate info-file and include it with:
-; #include "/home/user/workspace/radvio/cfg/radvio_custom.info"
+; #include "/home/user/workspace/rovio/cfg/rovio_custom.info"
 Common
 {
     doVECalibration false;                                       Should the camera-IMU extrinsics be calibrated online
@@ -10,23 +10,23 @@ Common
 Camera0
 {
   CalibrationFile  ;            Camera-Calibration file for intrinsics
-  qCM_x  0.5543417213240229;                               X-entry of IMU to Camera quaterion (Hamilton)
-  qCM_y  -0.5433799916950063;                               Y-entry of IMU to Camera quaterion (Hamilton)
-  qCM_z  0.44199772312966146;                               Z-entry of IMU to Camera quaterion (Hamilton)
-  qCM_w  0.4495347076402992;                               W-entry of IMU to Camera quaterion (Hamilton)
-  MrMC_x 0.0725765278611583;                               X-entry of IMU to Camera vector (expressed in IMU CF) [m]
-  MrMC_y 0.018936068067624674;                               Y-entry of IMU to Camera vector (expressed in IMU CF) [m]
-  MrMC_z -0.03560091123164558;                               Z-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  qCM_x  0.026375761023917914;                               X-entry of IMU to Camera quaterion (Hamilton)
+  qCM_y  -0.9644278824989215;                               Y-entry of IMU to Camera quaterion (Hamilton)
+  qCM_z  -0.0012345501377844781;                               Z-entry of IMU to Camera quaterion (Hamilton)
+  qCM_w  0.26302405702713366;                               W-entry of IMU to Camera quaterion (Hamilton)
+  MrMC_x 0.038061666087557386;                               X-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  MrMC_y -0.05736095749629019;                               Y-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  MrMC_z -0.004172631438085338;                               Z-entry of IMU to Camera vector (expressed in IMU CF) [m]
 }
 Radar
 {
-    qRM_x -0.9723699204
-    qRM_y 0
-    qRM_z 0.2334453639
-    qRM_w 0
-    MrMR_x 0.07872
-    MrMR_y 0.02159
-    MrMR_z -0.05919
+    qRM_x 0.7071068
+    qRM_y 0.0
+    qRM_z -0.7071068
+    qRM_w 0.0
+    MrMR_x -0.0078
+    MrMR_y 0.0217
+    MrMR_z -0.0093
 }
 Init
 {
@@ -80,75 +80,75 @@ Init
 }
 ImgUpdate
 {
-    timeOffset 0.0;               Time offset added to the pose measurement timestamps
+    timeOffset 0.00459687;                                      Time offset added to the pose measurement timestamps
     updateVecNormTermination 1e-4;
     maxNumIteration 20;
-    doPatchWarping true;                    Should the patches be warped
-    doFrameVisualisation false;                 Should the frames be visualized
-    visualizePatches false;                   Should the patches be visualized
-    useDirectMethod true;                   Should the EKF-innovation be based on direct intensity error (o.w. reprojection error)
-    startLevel 2;                       Highest patch level which is being employed (must be smaller than the hardcoded template parameter)
-    endLevel 1;                         Lowest patch level which is being employed
-    nDetectionBuckets 100;                    Number of discretization buckets used during the candidates selection
-    MahalanobisTh 9.21;                     Mahalanobis treshold for the update, 5.8858356
+    doPatchWarping true;                                        Should the patches be warped
+    doFrameVisualisation true;                                  Should the frames be visualized
+    visualizePatches false;                                     Should the patches be visualized
+    useDirectMethod true;                                       Should the EKF-innovation be based on direct intensity error (o.w. reprojection error)
+    startLevel 2;                                               Highest patch level which is being employed (must be smaller than the hardcoded template parameter)
+    endLevel 1;                                                 Lowest patch level which is being employed
+    nDetectionBuckets 100;                                      Number of discretization buckets used during the candidates selection
+    MahalanobisTh 9.21;                                         Mahalanobis treshold for the update, 5.8858356
     UpdateNoise
     {
-        pix 2;                          Covariance used for the reprojection error, 1/focal_length is roughly 1 pixel std [rad] (~1/f ~ 1/400^2 = 1/160000)
-        int 400;                        Covariance used for the photometric error [intensity^2]
+        pix 2;													Covariance used for the reprojection error, 1/focal_length is roughly 1 pixel std [rad] (~1/f ~ 1/400^2 = 1/160000)
+        int 400;												Covariance used for the photometric error [intensity^2]
     }
-    initCovFeature_0 0.5;                   Covariance for the initial distance (Relative to initialization depth [m^2/m^2])
-    initCovFeature_1 1e-5;                    Covariance for the initial bearing vector, x-component [rad^2]
-    initCovFeature_2 1e-5;                    Covariance for the initial bearing vector, y-component [rad^2]
-    initDepth 0.5;                        Initial value for the initial distance parameter
-    startDetectionTh 0.8;                   Threshold for detecting new features (min: 0, max: 1)
-    scoreDetectionExponent 0.25;                Exponent used for weighting the distance between candidates
-    penaltyDistance 100;                   Maximal distance which gets penalized during bucketing [pix]
-    zeroDistancePenalty 100;                  Penalty for zero distance (max: nDetectionBuckets)
-    statLocalQualityRange 10;                 Number of frames for local quality evaluation
-    statLocalVisibilityRange 100;               Number of frames for local visibility evaluation
-    statMinGlobalQualityRange 100;                Minimum number of frames for obtaining maximal global quality
-    trackingUpperBound 0.9;                   Threshold for local quality for min overall global quality
-    trackingLowerBound 0.8;                   Threshold for local quality for max overall global quality
-    minTrackedAndFreeFeatures 0.75;               Minimum of amount of feature which are either tracked or free
-    removalFactor 1.1;                      Factor for enforcing feature removal if not enough free
-    minRelativeSTScore 0.75;                  Minimum relative ST-score for extracting new feature patch
-    minAbsoluteSTScore 5.0;                   Minimum absolute ST-score for extracting new feature patch
-    minTimeBetweenPatchUpdate 1.0;                Minimum time between new multilevel patch extrection [s]
-    fastDetectionThreshold 5;                 Fast corner detector treshold while adding new feature
-    alignConvergencePixelRange 10;                Assumed convergence range for image alignment (gets scaled with the level) [pixels]
-    alignCoverageRatio 2;                   How many sigma of the uncertainty should be covered in the adaptive alignement
-    alignMaxUniSample 1;                    Maximal number of alignment seeds on one side -> total number of sample = 2n+1. Carefull can get very costly if diverging!
-    patchRejectionTh 50.0;                    If the average itensity error is larger than this the feauture is rejected [intensity], if smaller 0 the no check is performed
-    alignmentHuberNormThreshold 10;               Intensity error threshold for Huber norm (enabled if > 0)
-    alignmentGaussianWeightingSigma -1;             Width of Gaussian which is used for pixel error weighting (enabled if > 0)
-    alignmentGradientExponent 0.0;                Exponent used for gradient based weighting of residuals
-    useIntensityOffsetForAlignment true;            Should an intensity offset between the patches be considered
-    useIntensitySqewForAlignment true;              Should an intensity sqew between the patches be considered
-    removeNegativeFeatureAfterUpdate true;            Should feature with negative distance get removed
-    maxUncertaintyToDepthRatioForDepthInitialization 0.3;   If set to 0.0 the depth is initialized with the standard value provided above, otherwise RADVIO attempts to figure out a median depth in each frame
-    useCrossCameraMeasurements true;              Should cross measurements between frame be used. Might be turned of in calibration phase.
-    doStereoInitialization true;                Should a stereo match be used for feature initialization.
-    noiseGainForOffCamera 10.0;                 Factor added on update noise if not main camera
-    discriminativeSamplingDistance 0.02;            Sampling distance for checking discriminativity of patch (if <= 0.0 no check is performed).
-    discriminativeSamplingGain 1.1;               Gain for threshold above which the samples must lie (if <= 1.0 the patchRejectionTh is used).
+    initCovFeature_0 0.5;										Covariance for the initial distance (Relative to initialization depth [m^2/m^2])
+    initCovFeature_1 1e-5;										Covariance for the initial bearing vector, x-component [rad^2]
+    initCovFeature_2 1e-5;										Covariance for the initial bearing vector, y-component [rad^2]
+    initDepth 0.5;												Initial value for the initial distance parameter
+    startDetectionTh 0.8;										Threshold for detecting new features (min: 0, max: 1)
+    scoreDetectionExponent 0.25;								Exponent used for weighting the distance between candidates
+    penaltyDistance 100;										Maximal distance which gets penalized during bucketing [pix]
+    zeroDistancePenalty 100;									Penalty for zero distance (max: nDetectionBuckets)
+    statLocalQualityRange 10;									Number of frames for local quality evaluation
+    statLocalVisibilityRange 100;								Number of frames for local visibility evaluation
+    statMinGlobalQualityRange 100;								Minimum number of frames for obtaining maximal global quality
+    trackingUpperBound 0.9;										Threshold for local quality for min overall global quality
+    trackingLowerBound 0.8;										Threshold for local quality for max overall global quality
+    minTrackedAndFreeFeatures 0.75;								Minimum of amount of feature which are either tracked or free
+    removalFactor 1.1;											Factor for enforcing feature removal if not enough free
+    minRelativeSTScore 0.75;									Minimum relative ST-score for extracting new feature patch
+    minAbsoluteSTScore 5.0;										Minimum absolute ST-score for extracting new feature patch
+    minTimeBetweenPatchUpdate 1.0;								Minimum time between new multilevel patch extrection [s]
+    fastDetectionThreshold 5;									Fast corner detector treshold while adding new feature
+    alignConvergencePixelRange 10;								Assumed convergence range for image alignment (gets scaled with the level) [pixels]
+    alignCoverageRatio 2;										How many sigma of the uncertainty should be covered in the adaptive alignement
+    alignMaxUniSample 1;										Maximal number of alignment seeds on one side -> total number of sample = 2n+1. Carefull can get very costly if diverging!
+    patchRejectionTh 50.0;										If the average itensity error is larger than this the feauture is rejected [intensity], if smaller 0 the no check is performed
+    alignmentHuberNormThreshold 10;								Intensity error threshold for Huber norm (enabled if > 0)
+    alignmentGaussianWeightingSigma -1;							Width of Gaussian which is used for pixel error weighting (enabled if > 0)
+    alignmentGradientExponent 0.0;								Exponent used for gradient based weighting of residuals
+    useIntensityOffsetForAlignment true;						Should an intensity offset between the patches be considered
+    useIntensitySqewForAlignment true;							Should an intensity sqew between the patches be considered
+    removeNegativeFeatureAfterUpdate true;						Should feature with negative distance get removed
+    maxUncertaintyToDepthRatioForDepthInitialization 0.3;		If set to 0.0 the depth is initialized with the standard value provided above, otherwise ROVIO attempts to figure out a median depth in each frame
+    useCrossCameraMeasurements true;							Should cross measurements between frame be used. Might be turned of in calibration phase.
+    doStereoInitialization true;								Should a stereo match be used for feature initialization.
+    noiseGainForOffCamera 10.0;									Factor added on update noise if not main camera
+    discriminativeSamplingDistance 0.02;						Sampling distance for checking discriminativity of patch (if <= 0.0 no check is performed).
+    discriminativeSamplingGain 1.1;								Gain for threshold above which the samples must lie (if <= 1.0 the patchRejectionTh is used).
     MotionDetection
     {
-      isEnabled 0;                      Is the motion detection enabled
-      rateOfMovingFeaturesTh 0.5;               Amount of feature with motion for overall motion detection
-      pixelCoordinateMotionTh 1.0;              Threshold for motion detection for patched [pixels]
-      minFeatureCountForNoMotionDetection 5;          Min feature count in frame for motion detection
-    }
+        isEnabled 0;											Is the motion detection enabled
+	    rateOfMovingFeaturesTh 0.5;								Amount of feature with motion for overall motion detection
+	    pixelCoordinateMotionTh 1.0;							Threshold for motion detection for patched [pixels]
+	    minFeatureCountForNoMotionDetection 5;					Min feature count in frame for motion detection
+	}
     ZeroVelocityUpdate
     {
         UpdateNoise
         {
-            vel_0 0.01;                     X-Covariance of zero velocity update [m^2/s^2]
-            vel_1 0.01;                     Y-Covariance of zero velocity update [m^2/s^2]
-            vel_2 0.01;                     Z-Covariance of zero velocity update [m^2/s^2]
+            vel_0 0.01;											X-Covariance of zero velocity update [m^2/s^2]
+            vel_1 0.01;											Y-Covariance of zero velocity update [m^2/s^2]
+            vel_2 0.01;											Z-Covariance of zero velocity update [m^2/s^2]
         }
-        MahalanobisTh0 7.689997599999999;           Mahalanobid distance for zero velocity updates
-        minNoMotionTime 1.0;                  Min duration of no-motion
-        isEnabled 0;                      Should zero velocity update be applied, only works if MotionDetection.isEnabled is true
+        MahalanobisTh0 7.689997599999999;						Mahalanobid distance for zero velocity updates
+        minNoMotionTime 0.25;									Min duration of no-motion
+        isEnabled 0;											Should zero velocity update be applied, only woroks if MotionDetectin.isEnabled is true
     }
     Radar
     {
@@ -156,31 +156,31 @@ ImgUpdate
         mapMaxRange 20
         voxelMinDist 0.05
         voxelMaxPoints 20
-        doRadarInitialization true
+        doRadarInitialization false
         depthMinPoints 5
         featureCovScaleFactor 1.0
     }
 }
 Prediction
 {
-    timeOffset 0.0; -0.0036
+    timeOffset 0.0;
     PredictionNoise
     {
         pos_0 1e-4;               X-covariance parameter of position prediction [m^2/s]
         pos_1 1e-4;               Y-covariance parameter of position prediction [m^2/s]
         pos_2 1e-4;               Z-covariance parameter of position prediction [m^2/s]
-        vel_0 1.9e-6;               X-covariance parameter of velocity prediction [m^2/s^3]
-        vel_1 1.9e-6;               Y-covariance parameter of velocity prediction [m^2/s^3]
-        vel_2 1.9e-6;               Z-covariance parameter of velocity prediction [m^2/s^3]
-        acb_0 7.3e-9;               X-covariance parameter of accelerometer bias prediction [m^2/s^5]
-        acb_1 7.3e-9;               Y-covariance parameter of accelerometer bias prediction [m^2/s^5]
-        acb_2 7.3e-9;               Z-covariance parameter of accelerometer bias prediction [m^2/s^5]
-        gyb_0 2.8e-12;             X-covariance parameter of gyroscope bias prediction [rad^2/s^3]
-        gyb_1 2.8e-12;             Y-covariance parameter of gyroscope bias prediction [rad^2/s^3]
-        gyb_2 2.8e-12;             Z-covariance parameter of gyroscope bias prediction [rad^2/s^3]
-        att_0 3e-9;             X-Covariance parameter of attitude prediction [rad^2/s]
-        att_1 3e-9;             Y-Covariance parameter of attitude prediction [rad^2/s]
-        att_2 3e-9;             Z-Covariance parameter of attitude prediction [rad^2/s]
+        vel_0 1e-4;               X-covariance parameter of velocity prediction [m^2/s^3]
+        vel_1 1e-4;               Y-covariance parameter of velocity prediction [m^2/s^3]
+        vel_2 1e-4;               Z-covariance parameter of velocity prediction [m^2/s^3]
+        acb_0 1.84e-5;               X-covariance parameter of accelerometer bias prediction [m^2/s^5]
+        acb_1 1.84e-5;               Y-covariance parameter of accelerometer bias prediction [m^2/s^5]
+        acb_2 1.84e-5;               Z-covariance parameter of accelerometer bias prediction [m^2/s^5]
+        gyb_0 2.06e-10;             X-covariance parameter of gyroscope bias prediction [rad^2/s^3]
+        gyb_1 2.06e-10;             Y-covariance parameter of gyroscope bias prediction [rad^2/s^3]
+        gyb_2 2.06e-10;             Z-covariance parameter of gyroscope bias prediction [rad^2/s^3]
+        att_0 1.09e-6;             X-Covariance parameter of attitude prediction [rad^2/s]
+        att_1 1.09e-6;             Y-Covariance parameter of attitude prediction [rad^2/s]
+        att_2 1.09e-6;             Z-Covariance parameter of attitude prediction [rad^2/s]
         vep 1e-8;               Covariance parameter of linear extrinsics prediction [m^2/s]
         vea 1e-8;               Covariance parameter of rotational extrinsics prediction [rad^2/s]
         dep 0.0001;             Covariance parameter of distance prediction [m^2/s]
@@ -190,59 +190,59 @@ Prediction
 	}
     MotionDetection
     {
-      inertialMotionRorTh 0.1;        Treshold on rotational rate for motion detection [rad/s]
-      inertialMotionAccTh 0.5;        Treshold on acceleration for motion detection [m/s^2]
-  }
+	    inertialMotionRorTh 0.1;				Treshold on rotational rate for motion detection [rad/s]
+	    inertialMotionAccTh 0.5;				Treshold on acceleration for motion detection [m/s^2]
+	}
 }
 PoseUpdate
 {
     UpdateNoise
     {
-        pos_0 0.01;             X-Covariance of linear pose measurement update [m^2]
-        pos_1 0.01;             Y-Covariance of linear pose measurement update [m^2]
-        pos_2 0.01;             Z-Covariance of linear pose measurement update [m^2]
-        att_0 0.01;             X-Covariance of rotational pose measurement update [rad^2]
-        att_1 0.01;             Y-Covariance of rotational pose measurement update [rad^2]
-        att_2 0.01;             Z-Covariance of rotational pose measurement update [rad^2]
+        pos_0 0.01;							X-Covariance of linear pose measurement update [m^2]
+        pos_1 0.01;							Y-Covariance of linear pose measurement update [m^2]
+        pos_2 0.01;							Z-Covariance of linear pose measurement update [m^2]
+        att_0 0.01;							X-Covariance of rotational pose measurement update [rad^2]
+        att_1 0.01;							Y-Covariance of rotational pose measurement update [rad^2]
+        att_2 0.01;							Z-Covariance of rotational pose measurement update [rad^2]
     }
-    init_cov_IrIW 1;              Covariance of initial pose between inertial frames, linear part [m^2]
-    init_cov_qWI 1;               Covariance of initial pose between inertial frames, rotational part [rad^2]
-    init_cov_MrMV 1;              Covariance of initial pose between inertial frames, linear part [m^2]
-    init_cov_qVM 1;               Covariance of initial pose between inertial frames, rotational part [rad^2]
-    pre_cov_IrIW 1e-4;              Covariance parameter of pose between inertial frames, linear part [m^2/s]
-    pre_cov_qWI 1e-4;             Covariance parameter of pose between inertial frames, rotational part [rad^2/s]
-    pre_cov_MrMV 1e-4;              Covariance parameter of pose between inertial frames, linear part [m^2/s]
-    pre_cov_qVM 1e-4;             Covariance parameter of pose between inertial frames, rotational part [rad^2/s]
-    MahalanobisTh0 12.6511204;          Mahalonobis distance treshold of pose measurement
-    doVisualization false;            Should the measured poses be vizualized
-    enablePosition true;            Should the linear part be used during the update
-    enableAttitude true;            Should the rotation part be used during the update (e.g. set to fals eif feeding GPS-measurement)
-    noFeedbackToRadvio true;           By default the pose update is only used for aligning coordinate frame. Set to false if RADVIO should benefit frome the posed measurements.
-    doInertialAlignmentAtStart true;      Should the transformation between I and W be explicitly computed and set with the first pose measurement.
-    timeOffset 0.0;               Time offset added to the pose measurement timestamps
-    useOdometryCov false;     Should the UpdateNoise position covariance be scaled using the covariance in the Odometry message
-    qVM_x 0;                  X-entry of quaterion representing IMU to reference body coordinate frame of pose measurement (Hamilton)
-    qVM_y 0;                  Y-entry of quaterion representing IMU to reference body coordinate frame of pose measurement (Hamilton)
-    qVM_z 0;                  Z-entry of quaterion representing IMU to reference body coordinate frame of pose measurement (Hamilton)
-    qVM_w -1;                 W-entry of quaterion representing IMU to reference body coordinate frame of pose measurement (Hamilton)
-    MrMV_x 0;                 X-entry of vector representing IMU to reference body coordinate frame of pose measurement
-    MrMV_y 0;                 Y-entry of vector representing IMU to reference body coordinate frame of pose measurement
-    MrMV_z 0;                 Z-entry of vector representing IMU to reference body coordinate frame of pose measurement
-    qWI_x 0;                  X-entry of quaterion representing World to reference inertial coordinate frame of pose measurement (Hamilton)
-    qWI_y 0;                  Y-entry of quaterion representing World to reference inertial coordinate frame of pose measurement (Hamilton)
-    qWI_z 0;                  Z-entry of quaterion representing World to reference inertial coordinate frame of pose measurement (Hamilton)
-    qWI_w -1;                 W-entry of quaterion representing World to reference inertial coordinate frame of pose measurement (Hamilton)
-    IrIW_x 0;                 X-entry of vector representing World to reference inertial coordinate frame of pose measurement
-    IrIW_y 0;                 Y-entry of vector representing World to reference inertial coordinate frame of pose measurement
-    IrIW_z 0;                 Z-entry of vector representing World to reference inertial coordinate frame of pose measurement
+	init_cov_IrIW 1;							Covariance of initial pose between inertial frames, linear part [m^2]
+	init_cov_qWI 1;								Covariance of initial pose between inertial frames, rotational part [rad^2]
+	init_cov_MrMV 1;							Covariance of initial pose between inertial frames, linear part [m^2]
+	init_cov_qVM 1;								Covariance of initial pose between inertial frames, rotational part [rad^2]
+    pre_cov_IrIW 1e-4;							Covariance parameter of pose between inertial frames, linear part [m^2/s]
+    pre_cov_qWI 1e-4;							Covariance parameter of pose between inertial frames, rotational part [rad^2/s]
+    pre_cov_MrMV 1e-4;							Covariance parameter of pose between inertial frames, linear part [m^2/s]
+    pre_cov_qVM 1e-4;							Covariance parameter of pose between inertial frames, rotational part [rad^2/s]
+    MahalanobisTh0 12.6511204;					Mahalonobis distance treshold of pose measurement
+	doVisualization false;						Should the measured poses be vizualized
+	enablePosition true;						Should the linear part be used during the update
+	enableAttitude true;						Should the rotation part be used during the update (e.g. set to fals eif feeding GPS-measurement)
+	noFeedbackToRadvio true;					By default the pose update is only used for aligning coordinate frame. Set to false if ROVIO should benefit frome the posed measurements.
+	doInertialAlignmentAtStart true;			Should the transformation between I and W be explicitly computed and set with the first pose measurement.
+	timeOffset 0.02;								Time offset added to the pose measurement timestamps
+    useOdometryCov false;                    Should the UpdateNoise position covariance be scaled using the covariance in the Odometry message
+    qVM_x 0;									X-entry of quaterion representing IMU to reference body coordinate frame of pose measurement (Hamilton)
+    qVM_y 0;									Y-entry of quaterion representing IMU to reference body coordinate frame of pose measurement (Hamilton)
+    qVM_z 0;									Z-entry of quaterion representing IMU to reference body coordinate frame of pose measurement (Hamilton)
+    qVM_w 1;									W-entry of quaterion representing IMU to reference body coordinate frame of pose measurement (Hamilton)
+    MrMV_x 0;									X-entry of vector representing IMU to reference body coordinate frame of pose measurement
+    MrMV_y 0;									Y-entry of vector representing IMU to reference body coordinate frame of pose measurement
+    MrMV_z 0;									Z-entry of vector representing IMU to reference body coordinate frame of pose measurement
+    qWI_x 0;									X-entry of quaterion representing World to reference inertial coordinate frame of pose measurement (Hamilton)
+    qWI_y 0;									Y-entry of quaterion representing World to reference inertial coordinate frame of pose measurement (Hamilton)
+    qWI_z 0;									Z-entry of quaterion representing World to reference inertial coordinate frame of pose measurement (Hamilton)
+    qWI_w 1;									W-entry of quaterion representing World to reference inertial coordinate frame of pose measurement (Hamilton)
+    IrIW_x 0;									X-entry of vector representing World to reference inertial coordinate frame of pose measurement
+    IrIW_y 0;									Y-entry of vector representing World to reference inertial coordinate frame of pose measurement
+    IrIW_z 0;									Z-entry of vector representing World to reference inertial coordinate frame of pose measurement
 }
 VelocityUpdate
 {
     UpdateNoise
     {
-        vel_0 0.0001
-        vel_1 0.0001
-        vel_2 0.0001
+        vel_0 1.0
+        vel_1 1.0
+        vel_2 1.0
     }
     MahalanobisTh0 7.689997599999999
     qAM_x 0
@@ -266,4 +266,14 @@ DopplerUpdate
     azimuth_max_deg 60
     elevation_min_deg -60
     elevation_max_deg 60
+}
+BaroUpdate
+{
+    UpdateNoise
+    {
+        pos_0 1.0 
+        pos_1 1.0
+        pos_2 0.01
+    }
+    MahalanobisTh0 12.6511204
 }
