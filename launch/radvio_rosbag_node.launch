@@ -10,6 +10,7 @@
   <node pkg="radvio" type="radvio_rosbag_loader" name="radvio" output="screen" clear_params="true">
     <param name="filter_config" value="$(find radvio)/cfg/radvio.info"/>
     <param name="camera0_config" value="$(find radvio)/cfg/radvio_cam.yaml"/>
+    <param name="camera0_mask" value="$(find radvio)/cfg/radvio_cam_mask.png"/>
 
     <param name="rosbag_filename" value="$(arg rosbag_in)"/>
     <param name="filename_out" value="$(arg rosbag_out)"/>

@@ -68,6 +68,7 @@ class FeatureTrackerNode{
   static constexpr int detectionThreshold = 10; /**<See radvio::detectFastCorners().*/
   static constexpr bool drawNotFound_ = false;  /**<Draw MultilevelPatchFeature%s which were not found again.*/
   radvio::MultiCamera<nCam_> multiCamera_;
+  ImagePyramidMask<nLevels_> pyrMask_;
 
   /** \brief Constructor
    */
@@ -80,6 +81,14 @@ class FeatureTrackerNode{
     cv::namedWindow("Tracker");
     multiCamera_.cameras_[0].load("/home/michael/calibrations/p22035_equidist.yaml");
     fsm_.allocateMissing();
+
+    std::string imageMaskPath;
+    nh_.param("camera0_mask", imageMaskPath, imageMaskPath);
+    if (!imageMaskPath.empty()) {
+      if (!pyrMask_.computeFromMask(imageMaskPath)) {
+        ROS_ERROR_STREAM("Failed to load image mask from " << imageMaskPath);
+      }
+    }
   };
 
   /** \brief Destructor.
@@ -140,7 +149,9 @@ class FeatureTrackerNode{
         dc = 0.75*(fsm_.features_[i].mpCoordinates_->get_c() - fsm_.features_[i].log_previous_.get_c());
         fsm_.features_[i].log_previous_ = *(fsm_.features_[i].mpCoordinates_);
         fsm_.features_[i].mpCoordinates_->set_c(fsm_.features_[i].mpCoordinates_->get_c() + dc);
-        if(!fsm_.features_[i].mpMultilevelPatch_->isMultilevelPatchInFrame(pyr_,*(fsm_.features_[i].mpCoordinates_),nLevels_-1,false)){
+        if (!fsm_.features_[i].mpMultilevelPatch_->isMultilevelPatchInFrame(pyr_, *(fsm_.features_[i].mpCoordinates_),
+                                                                            nLevels_ - 1, false, pyrMask_.masks_))
+        {
           fsm_.features_[i].mpCoordinates_->set_c(fsm_.features_[i].log_previous_.get_c());
         }
         fsm_.features_[i].mpStatistics_->increaseStatistics(current_time);
@@ -185,12 +196,12 @@ class FeatureTrackerNode{
     for(unsigned int i=0;i<numPatchesPlot;i++){
       if(fsm_.isValid_[i+10]){
         fsm_.features_[i+10].mpMultilevelPatch_->drawMultilevelPatch(draw_patches_,cv::Point2i(2,2+i*(patchSize_*pow(2,nLevels_-1)+4)),1,false);
-        if(mp.isMultilevelPatchInFrame(pyr_,fsm_.features_[i+10].log_prediction_,nLevels_-1,false)){
+        if(mp.isMultilevelPatchInFrame(pyr_,fsm_.features_[i+10].log_prediction_,nLevels_-1,false,pyrMask_.masks_)){
           mp.extractMultilevelPatchFromImage(pyr_,fsm_.features_[i+10].log_prediction_,nLevels_-1,false);
           mp.drawMultilevelPatch(draw_patches_,cv::Point2i(patchSize_*pow(2,nLevels_-1)+6,2+i*(patchSize_*pow(2,nLevels_-1)+4)),1,false);
         }
         if(fsm_.features_[i+10].mpStatistics_->status_[0] == TRACKED
-            && mp.isMultilevelPatchInFrame(pyr_,*fsm_.features_[i+10].mpCoordinates_,nLevels_-1,false)){
+            && mp.isMultilevelPatchInFrame(pyr_,*fsm_.features_[i+10].mpCoordinates_,nLevels_-1,false,pyrMask_.masks_)){
           mp.extractMultilevelPatchFromImage(pyr_,*fsm_.features_[i+10].mpCoordinates_,nLevels_-1,false);
           mp.drawMultilevelPatch(draw_patches_,cv::Point2i(2*patchSize_*pow(2,nLevels_-1)+10,2+i*(patchSize_*pow(2,nLevels_-1)+4)),1,false);
           cv::rectangle(draw_patches_,cv::Point2i(0,i*(patchSize_*pow(2,nLevels_-1)+4)),cv::Point2i(patchSize_*pow(2,nLevels_-1)+3,(i+1)*(patchSize_*pow(2,nLevels_-1)+4)-1),cv::Scalar(255),2,8,0);
@@ -224,7 +235,7 @@ class FeatureTrackerNode{
     for(unsigned int i=0;i<nMax_;i++){
       if(fsm_.isValid_[i]){
         if(fsm_.features_[i].mpStatistics_->status_[0] == TRACKED
-            && fsm_.features_[i].mpMultilevelPatch_->isMultilevelPatchInFrame(pyr_,*fsm_.features_[i].mpCoordinates_,nLevels_-1,true)){
+            && fsm_.features_[i].mpMultilevelPatch_->isMultilevelPatchInFrame(pyr_,*fsm_.features_[i].mpCoordinates_,nLevels_-1,true,pyrMask_.masks_)){
           fsm_.features_[i].mpMultilevelPatch_->extractMultilevelPatchFromImage(pyr_,*fsm_.features_[i].mpCoordinates_,nLevels_-1,true);
         }
       }
@@ -236,7 +247,7 @@ class FeatureTrackerNode{
       ROS_INFO_STREAM(" Adding keypoints");
       const double t1 = (double) cv::getTickCount();
       for(int l=l1;l<=l2;l++){
-        pyr_.detectFastCorners(candidates,l,detectionThreshold);
+        pyr_.detectFastCorners(candidates, pyrMask_.masks_, l, detectionThreshold);
       }
       const double t2 = (double) cv::getTickCount();
       ROS_INFO_STREAM(" == Detected " << candidates.size() << " on levels " << l1 << "-" << l2 << " (" << (t2-t1)/cv::getTickFrequency()*1000 << " ms)");

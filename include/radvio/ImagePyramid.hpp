@@ -29,6 +29,7 @@
 #ifndef IMAGEPYRAMID_HPP_
 #define IMAGEPYRAMID_HPP_
 
+#include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -58,6 +59,59 @@ void halfSample(const cv::Mat& imgIn,cv::Mat& imgOut){
     }
   }
 }
+
+template <int n_levels>
+class ImagePyramidMask
+{
+public:
+  ImagePyramidMask(){};
+  virtual ~ImagePyramidMask(){};
+  cv::Mat masks_[n_levels]; /**<Array, containing the pyramid masks.*/
+
+  // Computes image masks for the whole image pyramid.
+  // Check fails if mask is an empty cv::Mat
+  void computeFromMask(const cv::Mat& mask, const bool useCv = false)
+  {
+    if (mask.empty()) {
+      throw std::invalid_argument("Image mask is invalid!");
+    }
+    mask.copyTo(masks_[0]);
+    for (int i = 1; i < n_levels; ++i)
+    {
+      if (!useCv)
+      {
+        halfSample(masks_[i - 1], masks_[i]);
+      }
+      else
+      {
+        cv::pyrDown(masks_[i - 1], masks_[i], cv::Size(masks_[i - 1].cols / 2, masks_[i - 1].rows / 2),
+                    cv::INTER_NEAREST);
+      }
+    }
+  }
+
+  // Load image mask from file, returns false if mask is empty/loading failed.
+  // Check fails if path is empty.
+  bool computeFromMask(const std::string& image_path)
+  {
+    if (image_path.empty()) {
+      throw std::invalid_argument("Path to mask image is empty!");
+    }
+
+    cv::Mat mask = cv::imread(image_path, cv::IMREAD_GRAYSCALE);
+    if (!mask.empty())
+    {
+      std::cout << "Successfully loaded image mask from path: " << image_path;
+      computeFromMask(mask);
+      return true;
+    }
+    else
+    {
+      std::cout << "ERROR: Couldn't load image mask from path: " << image_path;
+      return false;
+    }
+  }
+};
 
 /** \brief Image pyramid with selectable number of levels.
  *
@@ -136,14 +190,43 @@ class ImagePyramid{
    *                             See http://docs.opencv.org/trunk/df/d74/classcv_1_1FastFeatureDetector.html
    * @param valid_radius       - Radius inside which a feature is considered valid (as ratio of shortest image side)
    */
-  void detectFastCorners(FeatureCoordinatesVec & candidates, int l, int detectionThreshold, double valid_radius = std::numeric_limits<double>::max()) const{
+  void detectFastCorners(FeatureCoordinatesVec& candidates, const cv::Mat* masks, int l, int detectionThreshold,
+                         double valid_radius = std::numeric_limits<double>::max()) const
+  {
+    if (masks == nullptr) {
+      throw std::invalid_argument("masks pointer cannot be null");
+    }
     std::vector<cv::KeyPoint> keypoints;
 #if (CV_MAJOR_VERSION < 3)
     cv::FastFeatureDetector feature_detector_fast(detectionThreshold, true);
-    feature_detector_fast.detect(imgs_[l], keypoints);
+    if (!masks[l].empty())
+    {
+      if (masks[l].cols != imgs_[l].cols || masks[l].rows != imgs_[l].rows) {
+        std::cout << "masks[l].size: " << masks[l].size << '\n';
+        std::cout << "imgs_[l].size: " << imgs_[l].size << '\n';
+        throw std::invalid_argument("mask dimensions do not match image dimensions");
+      }
+      feature_detector_fast.detect(imgs_[l], keypoints, masks[l]);
+    }
+    else
+    {
+      feature_detector_fast.detect(imgs_[l], keypoints);
+    }
 #else
     auto feature_detector_fast = cv::FastFeatureDetector::create(detectionThreshold, true);
-    feature_detector_fast->detect(imgs_[l], keypoints);
+    if (!masks[l].empty())
+    {
+      if (masks[l].cols != imgs_[l].cols || masks[l].rows != imgs_[l].rows) {
+        std::cout << "masks[l].size: " << masks[l].size << '\n';
+        std::cout << "imgs_[l].size: " << imgs_[l].size << '\n';
+        throw std::invalid_argument("mask dimensions do not match image dimensions");
+      }
+      feature_detector_fast->detect(imgs_[l], keypoints, masks[l]);
+    }
+    else
+    {
+      feature_detector_fast->detect(imgs_[l], keypoints);
+    }
 #endif
 
     candidates.reserve(candidates.size()+keypoints.size());
