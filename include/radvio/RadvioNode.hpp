@@ -724,12 +724,13 @@ class RadvioNode{
 
     if (init_state_.isInitialized())
     {
-      const auto imu_post = mpFilter_->predictionTimeline_.measMap_.upper_bound(ts);
+      auto imu_post = mpFilter_->predictionTimeline_.measMap_.upper_bound(ts);
       if (imu_post == mpFilter_->predictionTimeline_.measMap_.begin() ||
           imu_post == mpFilter_->predictionTimeline_.measMap_.end())
       {
-        ROS_WARN("Couldn't get IMU at mid radar chirp");
-        return;
+        imu_post = std::prev(mpFilter_->predictionTimeline_.measMap_.end());
+        ROS_WARN("Couldn't get IMU at mid radar chirp, most recent is off by %f", ts - imu_post->first);
+        // return;
       }
       const auto imu_pre = std::prev(imu_post);
       // interpolation y = y0 + (x - x0) * (y1 - y0) / (x1 - x0)
@@ -751,7 +752,7 @@ class RadvioNode{
     {
       const pcl::PointCloud<radar::mmWavePoint> cloud = toPcl(targets_filtered);
       pcl::toROSMsg(cloud, targetsFilteredMsg_);
-      targetsFilteredMsg_.header.frame_id = msg->header.frame_id;
+      targetsFilteredMsg_.header.frame_id = radar_frame_;
       targetsFilteredMsg_.header.stamp = ros::Time(ts);
       pubTargetsFiltered_.publish(targetsFilteredMsg_);
     }

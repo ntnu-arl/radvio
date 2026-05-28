@@ -44,6 +44,22 @@ struct mmWavePoint
   float velocity;   // Doppler speed [m/s]
   PCL_MAKE_ALIGNED_OPERATOR_NEW
 };
+
+struct zadarPoint{
+  PCL_ADD_POINT4D; // position [m]
+  float snr;
+  float range;
+  float noise;
+  float power;
+  float doppler;
+  float adjusted_doppler;
+  uint32_t frame_num;
+  uint8_t is_static;
+  uint8_t removed;
+  uint8_t subframe_index;
+  uint8_t fence_id;
+  PCL_MAKE_ALIGNED_OPERATOR_NEW
+};
 }  // namespace radar
 }  // namespace radvio
 
@@ -55,6 +71,25 @@ POINT_CLOUD_REGISTER_POINT_STRUCT(
   (float, z, z)
   (float, intensity, intensity)
   (float, velocity, velocity)
+)
+// clang-format on
+// clang-format off
+POINT_CLOUD_REGISTER_POINT_STRUCT(
+  radvio::radar::zadarPoint,
+  (float, x, x)
+  (float, y, y)
+  (float, z, z)
+  (float, snr, snr)
+  (float, range, range)
+  (float, noise, noise)
+  (float, power, power)
+  (float, doppler, doppler)
+  (float, adjusted_doppler, adjusted_doppler)
+  (uint32_t, frame_num, frame_num)
+  (uint8_t, is_static, is_static)
+  (uint8_t, removed, removed)
+  (uint8_t, subframe_index, subframe_index)
+  (uint8_t, fence_id, fence_id)
 )
 // clang-format on
 

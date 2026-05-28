@@ -51,7 +51,6 @@ struct Target
   double x;
   double y;
   double z;
-  double intensity;
   double radial_speed;
 
   double range;
@@ -61,8 +60,8 @@ struct Target
   Eigen::Vector3d xyz;
   Eigen::Vector3d bearing;
 
-  Target(const double x, const double y, const double z, const double intensity, const double radial_speed)
-    : x(x), y(y), z(z), intensity(intensity), radial_speed(radial_speed)
+  Target(const double x, const double y, const double z, const double radial_speed)
+    : x(x), y(y), z(z), radial_speed(radial_speed)
   {
     range = std::sqrt(x * x + y * y + z * z);
     azimuth = std::atan2(y, x);
@@ -77,14 +76,14 @@ typedef std::vector<Target> TargetVector;
 
 TargetVector fromRos(const sensor_msgs::PointCloud2ConstPtr& msg)
 {
-  pcl::PointCloud<radar::mmWavePoint> cloud;
+  pcl::PointCloud<radar::zadarPoint> cloud;
   pcl::fromROSMsg(*msg, cloud);
 
   TargetVector targets;
   targets.reserve(cloud.points.size());
   for (const auto& p : cloud.points)
   {
-    targets.emplace_back(p.x, p.y, p.z, p.intensity, p.velocity);
+    targets.emplace_back(p.x, p.y, p.z, p.doppler);
   }
 
   return targets;
@@ -101,7 +100,6 @@ pcl::PointCloud<radar::mmWavePoint> toPcl(const TargetVector& targets)
     p.x = t.x;
     p.y = t.y;
     p.z = t.z;
-    p.intensity = t.intensity;
     p.velocity = t.radial_speed;
 
     cloud.points.push_back(p);
