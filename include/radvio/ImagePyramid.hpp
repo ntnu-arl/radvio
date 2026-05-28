@@ -101,13 +101,13 @@ public:
     cv::Mat mask = cv::imread(image_path, cv::IMREAD_GRAYSCALE);
     if (!mask.empty())
     {
-      std::cout << "Successfully loaded image mask from path: " << image_path;
+      std::cout << "Successfully loaded image mask from path: " << image_path << '\n';
       computeFromMask(mask);
       return true;
     }
     else
     {
-      std::cout << "ERROR: Couldn't load image mask from path: " << image_path;
+      std::cout << "ERROR: Couldn't load image mask from path: " << image_path << '\n';
       return false;
     }
   }
