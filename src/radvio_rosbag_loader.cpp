@@ -132,6 +132,11 @@ int main(int argc, char** argv){
                             + "_config", camera_config)) {
       mpFilter->cameraCalibrationFile_[camID] = camera_config;
     }
+    // Load per-camera image mask paths from ROS parameters
+    std::string camera_mask;
+    if (nh_private.getParam("camera" + std::to_string(camID) + "_mask", camera_mask)) {
+      mpFilter->cameraImageMaskFile_[camID] = camera_mask;
+    }
   }
   mpFilter->refreshProperties();
 

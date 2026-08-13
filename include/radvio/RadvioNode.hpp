@@ -76,6 +76,7 @@
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/image_encodings.h>
 #include <sensor_msgs/Imu.h>
+#include <sensor_msgs/FluidPressure.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <std_srvs/Empty.h>
 #include <tf/transform_broadcaster.h>
@@ -112,21 +113,30 @@ class RadvioNode{
   typedef typename mtPrediction::mtMeas mtPredictionMeas;
   mtPredictionMeas predictionMeas_;
   mtPrediction* mpPrediction_;
+  // Image Update
   typedef typename std::tuple_element<0,typename mtFilter::mtUpdates>::type mtImgUpdate;
   typedef typename mtImgUpdate::mtMeas mtImgMeas;
   mtImgMeas imgUpdateMeas_;
   mtImgUpdate* mpImgUpdate_;
+  // Pose Update
   typedef typename std::tuple_element<1,typename mtFilter::mtUpdates>::type mtPoseUpdate;
   typedef typename mtPoseUpdate::mtMeas mtPoseMeas;
   mtPoseMeas poseUpdateMeas_;
   mtPoseUpdate* mpPoseUpdate_;
+  //Velocity Update
   typedef typename std::tuple_element<2,typename mtFilter::mtUpdates>::type mtVelocityUpdate;
   typedef typename mtVelocityUpdate::mtMeas mtVelocityMeas;
   mtVelocityMeas velocityUpdateMeas_;
+  // Radar Update
   typedef typename std::tuple_element<3,typename mtFilter::mtUpdates>::type mtDopplerUpdate;
   typedef typename mtDopplerUpdate::mtMeas mtDopplerMeas;
   mtDopplerMeas dopplerUpdateMeas_;
   mtDopplerUpdate* mpDopplerUpdate_;
+  // Baro Update
+  typedef typename std::tuple_element<4,typename mtFilter::mtUpdates>::type mtBaroUpdate;
+  typedef typename mtBaroUpdate::mtMeas mtBaroMeas;
+  mtBaroMeas baroUpdateMeas_;
+  // mtBaroUpdate* mpBaroUpdate_;
 
   struct FilterInitializationState {
     FilterInitializationState()
@@ -182,6 +192,7 @@ class RadvioNode{
   ros::Subscriber subGroundtruthOdometry_;
   ros::Subscriber subVelocity_;
   ros::Subscriber subRadar_;
+  ros::Subscriber subBaro_;
   ros::ServiceServer srvResetFilter_;
   ros::ServiceServer srvResetToPoseFilter_;
   ros::Publisher pubOdometry_;
@@ -241,6 +252,10 @@ class RadvioNode{
   radvio::FeatureOutputReadable featureOutputReadable_;
   MXD featureOutputReadableCov_;
 
+  // Barometer
+  bool baro_offset_initialized_ = false;
+  double baro_offset_ = 0.0;
+
   // ROS names for output tf frames.
   std::string map_frame_;
   std::string world_frame_;
@@ -288,6 +303,7 @@ class RadvioNode{
     subGroundtruthOdometry_ = nh_.subscribe("odometry", 1000, &RadvioNode::groundtruthOdometryCallback, this);
     subVelocity_ = nh_.subscribe("abss/twist", 1000, &RadvioNode::velocityCallback,this);
     subRadar_ = nh_.subscribe("radar", 1000, &RadvioNode::radarCallback,this);
+    subBaro_ = nh_.subscribe("baro", 1000, &RadvioNode::baroCallback,this);
 
     // Initialize ROS service servers.
     srvResetFilter_ = nh_.advertiseService("radvio/reset", &RadvioNode::resetServiceCallback, this);
@@ -755,6 +771,30 @@ class RadvioNode{
       targetsFilteredMsg_.header.frame_id = radar_frame_;
       targetsFilteredMsg_.header.stamp = ros::Time(ts);
       pubTargetsFiltered_.publish(targetsFilteredMsg_);
+    }
+  }
+
+  /** \brief Callback for static barometer pressure for underwater (can be used for ariel later) */  
+  void baroCallback(const sensor_msgs::FluidPressure::ConstPtr& barometer){
+    std::lock_guard<std::mutex> lock(m_filter_);
+    if(init_state_.isInitialized()){
+
+      double altitude = 44330.0 * (1.0 - pow(barometer->fluid_pressure / 101325.0, 1.0/5.255));
+      // std::cout << "Altitude: " << altitude << std::endl;
+
+      if (!baro_offset_initialized_) {
+        baro_offset_ = imuOutput_.WrWB()(2) - altitude;
+        baro_offset_initialized_ = true;
+      }
+      else{
+        altitude += baro_offset_;
+        Eigen::Vector3d JrJV(0.0,0.0,altitude);
+        baroUpdateMeas_.pos() = JrJV;
+        mpFilter_->template addUpdateMeas<4>(baroUpdateMeas_,barometer->header.stamp.toSec());
+        updateAndPublish();
+      }
+      
+
     }
   }
 
@@ -1284,7 +1324,7 @@ class RadvioNode{
             {
               for (const Eigen::Vector4d& point : pair.second.points_)
               {
-                map.emplace_back(point.x(), point.y(), point.z());
+                map.points.emplace_back(point.x(), point.y(), point.z());
               }
             }
             pcl::toROSMsg(map, radarMapMsg_);

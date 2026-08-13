@@ -42,7 +42,7 @@ struct mmWavePoint
   PCL_ADD_POINT4D;  // position [m]
   float intensity;  // SNR [dB]
   float velocity;   // Doppler speed [m/s]
-  PCL_MAKE_ALIGNED_OPERATOR_NEW
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
 
 struct zadarPoint{

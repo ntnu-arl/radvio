@@ -71,7 +71,8 @@
 #include "radvio/ImuPrediction.hpp"
 #include "radvio/MultiCamera.hpp"
 #include "radvio/DopplerUpdate.hpp"
-
+#include "radvio/BaroUpdate.hpp"
+  
 namespace radvio {
 /** \brief Class, defining the Radvio Filter.
  *
@@ -82,13 +83,15 @@ class RadvioFilter:public LWF::FilterBase<ImuPrediction<FILTERSTATE>,
                                          ImgUpdate<FILTERSTATE>,
                                          PoseUpdate<FILTERSTATE,(int)(FILTERSTATE::mtState::nPose_>0)-1,(int)(FILTERSTATE::mtState::nPose_>1)*2-1>,
                                          VelocityUpdate<FILTERSTATE>,
-                                         DopplerUpdate<FILTERSTATE>>{
+                                         DopplerUpdate<FILTERSTATE>,
+                                         BaroUpdate<FILTERSTATE,(int)(FILTERSTATE::mtState::nPose_>0)-1,(int)(FILTERSTATE::mtState::nPose_>1)*2-1>>{
  public:
   typedef LWF::FilterBase<ImuPrediction<FILTERSTATE>,
                           ImgUpdate<FILTERSTATE>,
                           PoseUpdate<FILTERSTATE,(int)(FILTERSTATE::mtState::nPose_>0)-1,(int)(FILTERSTATE::mtState::nPose_>1)*2-1>,
                           VelocityUpdate<FILTERSTATE>,
-                          DopplerUpdate<FILTERSTATE>> Base;
+                          DopplerUpdate<FILTERSTATE>,
+                          BaroUpdate<FILTERSTATE,(int)(FILTERSTATE::mtState::nPose_>0)-1,(int)(FILTERSTATE::mtState::nPose_>1)*2-1>> Base;
   using Base::init_;
   using Base::reset;
   using Base::predictionTimeline_;
@@ -108,6 +111,7 @@ class RadvioFilter:public LWF::FilterBase<ImuPrediction<FILTERSTATE>,
   typedef typename Base::mtState mtState;
   radvio::MultiCamera<mtState::nCam_> multiCamera_;
   std::string cameraCalibrationFile_[mtState::nCam_];
+  std::string cameraImageMaskFile_[mtState::nCam_];
   int depthTypeInt_;
 
   /** \brief Constructor. Initializes the filter.
@@ -128,12 +132,16 @@ class RadvioFilter:public LWF::FilterBase<ImuPrediction<FILTERSTATE>,
     subHandlers_["VelocityUpdate"] = &std::get<2>(mUpdates_);
     subHandlers_.erase("Update3");
     subHandlers_["DopplerUpdate"] = &std::get<3>(mUpdates_);
+    subHandlers_.erase("Update4");
+    subHandlers_["BaroUpdate"] = &std::get<4>(mUpdates_);
     boolRegister_.registerScalar("Common.doVECalibration",init_.state_.aux().doVECalibration_);
     boolRegister_.registerScalar("Common.doRECalibration",init_.state_.aux().doRECalibration_);
     intRegister_.registerScalar("Common.depthType",depthTypeInt_);
     for(int camID=0;camID<mtState::nCam_;camID++){
       cameraCalibrationFile_[camID] = "";
+      cameraImageMaskFile_[camID] = "";
       stringRegister_.registerScalar("Camera" + std::to_string(camID) + ".CalibrationFile",cameraCalibrationFile_[camID]);
+      stringRegister_.registerScalar("Camera" + std::to_string(camID) + ".ImageMaskFile",cameraImageMaskFile_[camID]);
       doubleRegister_.registerVector("Camera" + std::to_string(camID) + ".MrMC",init_.state_.aux().MrMC_[camID]);
       doubleRegister_.registerQuaternion("Camera" + std::to_string(camID) + ".qCM",init_.state_.aux().qCM_[camID]);
       doubleRegister_.removeScalarByVar(init_.state_.MrMC(camID)(0));
@@ -243,6 +251,10 @@ class RadvioFilter:public LWF::FilterBase<ImuPrediction<FILTERSTATE>,
     for(int camID = 0;camID<mtState::nCam_;camID++){
       if (!cameraCalibrationFile_[camID].empty()) {
         multiCamera_.cameras_[camID].load(cameraCalibrationFile_[camID]);
+      }
+      // Load per-camera image masks
+      if (!cameraImageMaskFile_[camID].empty()) {
+        std::get<0>(mUpdates_).pyrMask_[camID].computeFromMask(cameraImageMaskFile_[camID]);
       }
     }
     for(int i=0;i<FILTERSTATE::mtState::nMax_;i++){
