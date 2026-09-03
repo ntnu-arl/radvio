@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <node pkg="pcl_filter" type="pcl_filter_node" name="pcl_filter" output="screen">
+    <param name="input" value="/radar/points_corrected"/>
+    <param name="output" value="/radar/points_downsampled"/>
+    <param name="leaf_size" value="10.0"/>
+  </node>
+
+  <node pkg="path_tool" type="timefix.py" name="timefix" output="screen" clear_params="true">
+    <param name="input_topic" value="/radar/points"/>
+    <param name="output_topic" value="/radar/points_corrected"/>
+    <param name="message_type" value="sensor_msgs/PointCloud"/>
+    <param name="offset_seconds" value="-695.891"/>
+  </node>
+</launch>

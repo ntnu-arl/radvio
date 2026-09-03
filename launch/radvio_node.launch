@@ -1,20 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
-  <node pkg="image_transport" type="republish" name="image_republish" output="screen" args="compressed">
-    <remap from="in" to="/cam0/cam0"/>
-    <remap from="out" to="/cam0/image_raw"/>
+  <node pkg="pcl_filter" type="pcl_filter_node" name="pcl_filter" output="screen">
+    <param name="input" value="/radar/points"/>
+    <param name="output" value="/radar/points_downsampled"/>
+    <param name="leaf_size" value="10.0"/>
+  </node>
+
+  <node pkg="path_tool" type="save_path.py" name="path_tool" output="screen" clear_params="true">
+    <!-- <param name="rotation_deg" value="-42.0" /> -->
+    <param name="rotation_deg" value="138.0" />
+    <remap from="/odom" to="/mavros/local_position/odom" />
+    <remap from="/path" to="/mavros/local_position/path" />
   </node>
 
   <node pkg="radvio" type="radvio_node" name="radvio" output="screen" clear_params="true">
-    <param name="filter_config" value="$(find radvio)/cfg/radvio.info"/>
-    <param name="camera0_config" value="$(find radvio)/cfg/radvio_cam.yaml"/>
-    <param name="camera0_mask" value="$(find radvio)/cfg/radvio_cam_mask.png"/>
+    <param name="filter_config" value="/root/workspace/config/radvio.info"/>
+    <param name="camera0_config" value="/root/workspace/config/radvio_cam.yaml"/>
+    <param name="camera0_mask" value="/root/workspace/config/radvio_cam_mask.png"/>
 
     <param name="image_skip_factor" value="0"/>
 
-    <remap from="imu0" to="/imu_apps"/>
-    <remap from="cam0/image_raw" to="/tracking"/>
-    <remap from="radar" to="/radar/cloud"/>
+    <remap from="imu0" to="/vectornav/imu/data"/>
+    <remap from="cam0/image_raw" to="/tracking/tracking"/>
+    <remap from="radar" to="/radar/points_downsampled2"/>
     <remap from="baro" to="/mavros/imu/static_pressure"/>
   </node>
 </launch>

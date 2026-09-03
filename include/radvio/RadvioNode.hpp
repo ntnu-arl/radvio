@@ -780,21 +780,17 @@ class RadvioNode{
     if(init_state_.isInitialized()){
 
       double altitude = 44330.0 * (1.0 - pow(barometer->fluid_pressure / 101325.0, 1.0/5.255));
-      // std::cout << "Altitude: " << altitude << std::endl;
-
+      
       if (!baro_offset_initialized_) {
         baro_offset_ = imuOutput_.WrWB()(2) - altitude;
         baro_offset_initialized_ = true;
       }
-      else{
-        altitude += baro_offset_;
-        Eigen::Vector3d JrJV(0.0,0.0,altitude);
-        baroUpdateMeas_.pos() = JrJV;
-        mpFilter_->template addUpdateMeas<4>(baroUpdateMeas_,barometer->header.stamp.toSec());
-        updateAndPublish();
-      }
-      
-
+      altitude += baro_offset_;
+      // std::cout << "Altitude: " << altitude << std::endl;
+      Eigen::Vector3d JrJV(0.0,0.0,altitude);
+      baroUpdateMeas_.pos() = JrJV;
+      mpFilter_->template addUpdateMeas<4>(baroUpdateMeas_,barometer->header.stamp.toSec());
+      updateAndPublish();
     }
   }
 
