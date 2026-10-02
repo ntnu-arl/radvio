@@ -348,8 +348,8 @@ public:
   {
     constexpr double rad2deg = 180.0 / M_PI;
 
-    if ((target.range < range_min_) || (target.azimuth < azimuth_min_) || (target.azimuth > azimuth_max_) ||
-        (target.elevation < elevation_min_) || (target.elevation > elevation_max_))
+    if ((target.range < range_min_) || (target.azimuth * rad2deg < azimuth_min_) || (target.azimuth * rad2deg > azimuth_max_) ||
+        (target.elevation * rad2deg < elevation_min_) || (target.elevation * rad2deg > elevation_max_))
     {
       return false;
     }

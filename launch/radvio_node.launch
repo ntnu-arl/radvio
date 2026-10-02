@@ -3,14 +3,24 @@
   <node pkg="pcl_filter" type="pcl_filter_node" name="pcl_filter" output="screen">
     <param name="input" value="/radar/points"/>
     <param name="output" value="/radar/points_downsampled"/>
-    <param name="leaf_size" value="10.0"/>
+    <param name="method" value="random" />
+    <param name="leaf_size" value="20.0"/>
+    <param name="percentage" value="0.01" />
+    <param name="downsample_all_data" value="false" />
   </node>
 
   <node pkg="path_tool" type="save_path.py" name="path_tool" output="screen" clear_params="true">
-    <!-- <param name="rotation_deg" value="-42.0" /> -->
-    <param name="rotation_deg" value="138.0" />
-    <remap from="/odom" to="/mavros/local_position/odom" />
-    <remap from="/path" to="/mavros/local_position/path" />
+    <!-- <param name="rotation_deg" value="-42.0,138.0" /> -->
+    <remap from="/odom_in" to="/mavros/local_position/odom" />
+    <remap from="/odom_out" to="/mavros/local_position/odom_aligned" />
+    <remap from="/path_out" to="/mavros/local_position/path_aligned" />
+    <remap from="/state_in" to="/mavros/state" />
+  </node>
+
+  <node pkg="path_tool" type="comp_path.py" name="comp_path" output="screen" clear_params="true">
+    <!-- <param name="rotation_deg" value="-42.0,138.0" /> -->
+    <remap from="/path_a" to="/radvio/path" />
+    <remap from="/path_b" to="/mavros/local_position/path_aligned" />
   </node>
 
   <node pkg="radvio" type="radvio_node" name="radvio" output="screen" clear_params="true">
@@ -22,7 +32,7 @@
 
     <remap from="imu0" to="/vectornav/imu/data"/>
     <remap from="cam0/image_raw" to="/tracking/tracking"/>
-    <remap from="radar" to="/radar/points_downsampled2"/>
+    <remap from="radar" to="/radar/points_downsampled"/>
     <remap from="baro" to="/mavros/imu/static_pressure"/>
   </node>
 </launch>
