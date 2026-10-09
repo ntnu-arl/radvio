@@ -136,7 +136,7 @@ class RadvioNode{
   typedef typename std::tuple_element<4,typename mtFilter::mtUpdates>::type mtBaroUpdate;
   typedef typename mtBaroUpdate::mtMeas mtBaroMeas;
   mtBaroMeas baroUpdateMeas_;
-  // mtBaroUpdate* mpBaroUpdate_;
+  mtBaroUpdate* mpBaroUpdate_;
 
   struct FilterInitializationState {
     FilterInitializationState()
@@ -254,6 +254,7 @@ class RadvioNode{
 
   // Barometer
   bool baro_offset_initialized_ = false;
+  bool baro_fusion_started_ = false;
   double baro_offset_ = 0.0;
 
   // ROS names for output tf frames.
@@ -282,6 +283,7 @@ class RadvioNode{
     mpImgUpdate_ = &std::get<0>(mpFilter_->mUpdates_);
     mpPoseUpdate_ = &std::get<1>(mpFilter_->mUpdates_);
     mpDopplerUpdate_ = &std::get<3>(mpFilter_->mUpdates_);
+    mpBaroUpdate_ = &std::get<4>(mpFilter_->mUpdates_);
     forceOdometryPublishing_ = false;
     forcePoseWithCovariancePublishing_ = false;
     forceTransformPublishing_ = false;
@@ -734,7 +736,7 @@ class RadvioNode{
     const TargetVector targets_filtered = filterTargets(targets);
     if (targets_filtered.empty())
     {
-      ROS_WARN("Radar point cloud empty after filtering");
+      //ROS_WARN("Radar point cloud empty after filtering");
       return;
     }
 
@@ -778,16 +780,30 @@ class RadvioNode{
   void baroCallback(const sensor_msgs::FluidPressure::ConstPtr& barometer){
     std::lock_guard<std::mutex> lock(m_filter_);
     if(init_state_.isInitialized()){
+      // Convert barometric pressure to altitude
+      const double altitude_ = 44330.0 * (1.0 - pow(barometer->fluid_pressure / 101325.0, 1.0/5.255));
+      double altitude_vio_offset_ = 0.0;
 
-      double altitude = 44330.0 * (1.0 - pow(barometer->fluid_pressure / 101325.0, 1.0/5.255));
-      
       if (!baro_offset_initialized_) {
-        baro_offset_ = imuOutput_.WrWB()(2) - altitude;
+        baro_offset_ = altitude_; // Calculate the offset based on the initial position
+        altitude_vio_offset_ = init_state_.WrWM_(2); // Use the initial position's z-coordinate as the VIO altitude
+        ROS_INFO("Barometric reference altitude initialized to %.3f m", altitude_);
+        ROS_INFO("Vio altitude offset %.3f m", altitude_vio_offset_);
         baro_offset_initialized_ = true;
       }
-      altitude += baro_offset_;
-      // std::cout << "Altitude: " << altitude << std::endl;
-      Eigen::Vector3d JrJV(0.0,0.0,altitude);
+      const double altitude_relative_ = altitude_ - baro_offset_ ; // Adjust altitude with offset and initial position
+
+      if (!baro_fusion_started_) {
+        if (altitude_relative_ < mpBaroUpdate_->fusionStartAltitude_) {
+          return;
+        }
+        baro_fusion_started_ = true;
+        ROS_INFO("Starting barometric fusion at barometric altitude %.3f m",
+                altitude_relative_);
+      }
+
+      // Create a 3D vector for the barometric update
+      Eigen::Vector3d JrJV(0.0,0.0, altitude_relative_ + altitude_vio_offset_);
       baroUpdateMeas_.pos() = JrJV;
       mpFilter_->template addUpdateMeas<4>(baroUpdateMeas_,barometer->header.stamp.toSec());
       updateAndPublish();
@@ -823,7 +839,8 @@ class RadvioNode{
       std::cout << "Reinitialization already triggered. Ignoring request...";
       return;
     }
-
+    baro_offset_initialized_ = false;
+    baro_fusion_started_ = false;
     init_state_.state_ = FilterInitializationState::State::WaitForInitUsingAccel;
   }
 
@@ -841,6 +858,8 @@ class RadvioNode{
 
     init_state_.WrWM_ = WrWM;
     init_state_.qMW_ = qMW;
+    baro_offset_initialized_ = false;
+    baro_fusion_started_ = false;
     init_state_.state_ = FilterInitializationState::State::WaitForInitExternalPose;
   }
 

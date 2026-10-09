@@ -145,6 +145,7 @@ class BaroUpdate: public LWF::Update<BaroInnovation,FILTERSTATE,BaroUpdateMeas,
   V3D IrIW_;
 
   Eigen::MatrixXd defaultUpdnoiP_; // Configured update covariance, that will (optionally) be scaled by the measurement
+  double fusionStartAltitude_ = 0.0;
 
   /** \brief Constructor.
    *
@@ -169,6 +170,7 @@ class BaroUpdate: public LWF::Update<BaroInnovation,FILTERSTATE,BaroUpdateMeas,
     mtNoise n;
     n.setIdentity();
     n.registerCovarianceToPropertyHandler_(defaultUpdnoiP_,this,"UpdateNoise.");
+    doubleRegister_.registerScalar("fusionStartAltitude", fusionStartAltitude_);
 
   };
 
