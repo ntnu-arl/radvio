@@ -256,6 +256,7 @@ class RadvioNode{
   bool baro_offset_initialized_ = false;
   bool baro_fusion_started_ = false;
   double baro_offset_ = 0.0;
+  double altitude_vio_offset_ = 0.0;
 
   // ROS names for output tf frames.
   std::string map_frame_;
@@ -784,7 +785,6 @@ class RadvioNode{
     if(init_state_.isInitialized()){
       // Convert barometric pressure to altitude
       const double altitude_ = 44330.0 * (1.0 - pow(barometer->fluid_pressure / 101325.0, 1.0/5.255));
-      double altitude_vio_offset_ = 0.0;
 
       if (!baro_offset_initialized_) {
         baro_offset_ = altitude_; // Calculate the offset based on the initial position
