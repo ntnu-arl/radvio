@@ -233,6 +233,12 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
   int voxelMaxPoints_;
   // for depth init
   bool doRadarInitialization_;
+  bool doFlatGroundInitialization_;
+  double groundHeight_;
+  double maxFlatGroundDistance_;
+  double minFlatGroundDistance_;
+  double initialPositionZ_;
+  bool initialPositionCaptured_;
   int depthMinPoints_;
   double featureCovScaleFactor_;
 
@@ -363,8 +369,8 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
     discriminativeSamplingDistance_ = 0.0;
     discriminativeSamplingGain_ = 0.0;
     timeOffset_ = 0.0;
-    doubleRegister_.registerDiagonalMatrix("initCovFeature",initCovFeature_);
-    doubleRegister_.registerScalar("initDepth",initDepth_);
+    doubleRegister_.registerDiagonalMatrix("DepthInit.initCovFeature",initCovFeature_);
+    doubleRegister_.registerScalar("DepthInit.initDepth",initDepth_);
     doubleRegister_.registerScalar("startDetectionTh",startDetectionTh_);
     doubleRegister_.registerScalar("scoreDetectionExponent",scoreDetectionExponent_);
     doubleRegister_.registerScalar("penaltyDistance",penaltyDistance_);
@@ -378,7 +384,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
     doubleRegister_.registerScalar("patchRejectionTh",patchRejectionTh_);
     doubleRegister_.registerScalar("MotionDetection.rateOfMovingFeaturesTh",rateOfMovingFeaturesTh_);
     doubleRegister_.registerScalar("MotionDetection.pixelCoordinateMotionTh",pixelCoordinateMotionTh_);
-    doubleRegister_.registerScalar("maxUncertaintyToDepthRatioForDepthInitialization",maxUncertaintyToDepthRatioForDepthInitialization_);
+    doubleRegister_.registerScalar("DepthInit.maxUncertaintyToDepthRatio",maxUncertaintyToDepthRatioForDepthInitialization_);
     doubleRegister_.registerScalar("alignConvergencePixelRange",alignConvergencePixelRange_);
     doubleRegister_.registerScalar("alignCoverageRatio",alignCoverageRatio_);
     doubleRegister_.registerScalar("removalFactor",removalFactor_);
@@ -396,7 +402,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
     boolRegister_.registerScalar("visualizePatches",visualizePatches_);
     boolRegister_.registerScalar("removeNegativeFeatureAfterUpdate",removeNegativeFeatureAfterUpdate_);
     boolRegister_.registerScalar("useCrossCameraMeasurements",useCrossCameraMeasurements_);
-    boolRegister_.registerScalar("doStereoInitialization",doStereoInitialization_);
+    boolRegister_.registerScalar("DepthInit.doStereoInitialization",doStereoInitialization_);
     boolRegister_.registerScalar("useIntensityOffsetForAlignment",alignment_.useIntensityOffset_);
     boolRegister_.registerScalar("useIntensitySqewForAlignment",alignment_.useIntensitySqew_);
     doubleRegister_.removeScalarByVar(updnoiP_(0,0));
@@ -425,15 +431,25 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
     voxelMinDist_ = 0.05;
     voxelMaxPoints_ = 20;
     doRadarInitialization_ = true;
+    doFlatGroundInitialization_ = false;
+    groundHeight_ = 0.0;
+    maxFlatGroundDistance_ = 20.0;
+    minFlatGroundDistance_ = 0.1;
+    initialPositionZ_ = 0.0;
+    initialPositionCaptured_ = false;
     depthMinPoints_ = 3;
     featureCovScaleFactor_ = 1e-3;
-    doubleRegister_.registerScalar("Radar.mapLeafSize", mapLeafSize_);
-    doubleRegister_.registerScalar("Radar.mapMaxRange", mapMaxRange_);
-    doubleRegister_.registerScalar("Radar.voxelMinDist", voxelMinDist_);
-    intRegister_.registerScalar("Radar.voxelMaxPoints", voxelMaxPoints_);
-    boolRegister_.registerScalar("Radar.doRadarInitialization", doRadarInitialization_);
-    intRegister_.registerScalar("Radar.depthMinPoints", depthMinPoints_);
-    doubleRegister_.registerScalar("Radar.featureCovScaleFactor", featureCovScaleFactor_);
+    doubleRegister_.registerScalar("DepthInit.Radar.mapLeafSize", mapLeafSize_);
+    doubleRegister_.registerScalar("DepthInit.Radar.mapMaxRange", mapMaxRange_);
+    doubleRegister_.registerScalar("DepthInit.Radar.voxelMinDist", voxelMinDist_);
+    doubleRegister_.registerScalar("DepthInit.groundHeight", groundHeight_);
+    doubleRegister_.registerScalar("DepthInit.maxFlatGroundDistance", maxFlatGroundDistance_);
+    doubleRegister_.registerScalar("DepthInit.minFlatGroundDistance", minFlatGroundDistance_);
+    intRegister_.registerScalar("DepthInit.Radar.voxelMaxPoints", voxelMaxPoints_);
+    boolRegister_.registerScalar("DepthInit.doFlatGroundInitialization", doFlatGroundInitialization_);
+    boolRegister_.registerScalar("DepthInit.doRadarInitialization", doRadarInitialization_);
+    intRegister_.registerScalar("DepthInit.Radar.depthMinPoints", depthMinPoints_);
+    doubleRegister_.registerScalar("DepthInit.featureCovScaleFactor", featureCovScaleFactor_);
   };
 
   /** \brief Destructor
@@ -463,6 +479,11 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
   void setCamera(MultiCamera<mtState::nCam_>* mpMultiCamera){
     mpMultiCamera_ = mpMultiCamera;
     transformFeatureOutputCT_.mpMultiCamera_ = mpMultiCamera;
+  }
+
+  void setInitialGroundReference(const double initialPositionZ){
+    initialPositionZ_ = initialPositionZ;
+    initialPositionCaptured_ = true;
   }
 
   /** \brief Sets the innovation term.
@@ -1079,8 +1100,14 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
           f.mpStatistics_->status_[camID] = TRACKED;
           f.mpStatistics_->lastPatchUpdate_ = filterState.t_;
           f.mpDistance_->p_ = medianDepthParameters[camID];
-
           double featureCovScale = 1.0;
+
+          if (doFlatGroundInitialization_){
+            if(distanceFromFlatGround(filterState, camID, *it, *f.mpDistance_)){
+              featureCovScale = featureCovScaleFactor_;
+            }
+          }
+          
           if (doRadarInitialization_){
             if (distanceFromVoxel(filterState, meas, *it, *f.mpDistance_)){
               featureCovScale = featureCovScaleFactor_;
@@ -1293,6 +1320,33 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
         feature_voxels_[idx].emplace_back(pair);
       }
     }
+  }
+
+  bool distanceFromFlatGround(const mtFilterState& filterState, const int camID, const int idx, FeatureDistance& d)
+  {
+    const auto& state = filterState.state_;
+    const FeatureCoordinates& coordinates = *filterState.fsm_.features_[idx].mpCoordinates_;
+    const V3D rayWorld = state.qWM().rotate(state.qCM(camID).inverted().rotate(coordinates.get_nor().getVec()));
+    const double rayVerticalComponent = rayWorld(2);
+    if (rayVerticalComponent >= -1e-6){
+      return false;
+    }
+    const V3D cameraPosition = state.WrWC(camID);
+    const double groundPlaneHeight = initialPositionZ_ + groundHeight_;
+    const double distance = (groundPlaneHeight - cameraPosition(2)) / rayVerticalComponent;
+    if (distance <= 1e-6){
+      return false;
+    }
+
+    double initializedDistance = distance;
+    if (minFlatGroundDistance_ > 0.0){
+      initializedDistance = std::max(initializedDistance, minFlatGroundDistance_);
+    }
+    if (maxFlatGroundDistance_ > 0.0){
+      initializedDistance = std::min(initializedDistance, maxFlatGroundDistance_);
+    }
+    d.setParameter(initializedDistance);
+    return true;
   }
 
   // TODO(morten): check for voxels with neighbors?

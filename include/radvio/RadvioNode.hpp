@@ -568,11 +568,13 @@ class RadvioNode{
         case FilterInitializationState::State::WaitForInitExternalPose: {
           std::cout << "-- Filter: Initializing using external pose ..." << std::endl;
           mpFilter_->resetWithPose(init_state_.WrWM_, init_state_.qMW_, imu_msg->header.stamp.toSec());
+          mpImgUpdate_->setInitialGroundReference(init_state_.WrWM_(2));
           break;
         }
         case FilterInitializationState::State::WaitForInitUsingAccel: {
           std::cout << "-- Filter: Initializing using accel. measurement ..." << std::endl;
           mpFilter_->resetWithAccelerometer(predictionMeas_.template get<mtPredictionMeas::_acc>(),imu_msg->header.stamp.toSec());
+          mpImgUpdate_->setInitialGroundReference(mpFilter_->init_.state_.WrWM()(2));
           break;
         }
         default: {
